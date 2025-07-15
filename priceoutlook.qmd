@@ -1,6 +1,37 @@
 ---
-title: "PriceOutlook"
+title: "Rice Price Outlook: Trends and Implications"
+subtitle: "Tracking global and its impact on local rice price movements"
+author: "PhilRice Data Analytics Center"
+# format: revealjs
+format:
+  revealjs:
+    css: custom-styles.css
+    touch: true
+    controls: true
+    slide-number: true
+    transition: fade
+    chalkboard: 
+      buttons: false
+    logo: www/dac.png
+    footer: "PhilRice Data Analytics Center"
+execute: 
+  echo: false
+  warning: false
+  message: false
+  freeze: auto
 ---
+
+```{r}
+#| label: setup
+#| echo: false
+
+library(tidyverse)
+library(DT)
+library(htmltools)
+library(plotly)
+
+
+```
 
 ## Quarto
 
