@@ -29,10 +29,64 @@ library(tidyverse)
 library(DT)
 library(htmltools)
 library(plotly)
-
+library(jsonlite)
+library(httr)
 
 ```
 
+
+```{r}
+#|label: data_fetching
+#|echo: false
+
+data_api <- function(url, key, mute_onSuccess=TRUE) {
+  response <- POST(
+    url,
+    add_headers("Content-Type" = "application/json"),
+    body = list(key = key),  # Pass the list as the body
+    encode = "json"  # Ensure the body is encoded as JSON
+  )
+  if (status_code(response) == 200) {
+    
+    if (!mute_onSuccess){
+      print("Request was successful!")
+    }
+    
+    data <- content(response, "text", encoding = "UTF-8")
+    json_data <- fromJSON(data, flatten = TRUE)
+    data_df <- as.data.frame(json_data$data)
+    
+    if (!mute_onSuccess){
+      print(head(data_df))
+    }
+    
+  } else {
+    print(paste("Request failed with status:", status_code(response)))
+    print(content(response, "text", encoding = "UTF-8"))  # Print server error message
+  }
+  
+  return(data_df)
+}
+
+#key
+key <-  "cddcc4f040befb5ecc594aa9cb926379"
+
+url_list <-  list(
+  wholesale_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/wholesale_prices",
+  fao_fob_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/fob_prices",
+  exrates = "https://ricelytics.philrice.gov.ph/data_lake/api/exchange_rate",
+  retail_prices= "https://ricelytics.philrice.gov.ph/data_lake/api/retail_prices",
+  farmgate_prices= "https://ricelytics.philrice.gov.ph/data_lake/api/farmgate_prices",
+  vfa_fob_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/fob_prices_vfa"
+)
+
+
+
+data <- lapply(url_list, function(x) data_api(x, key))
+
+
+
+```
 ## Quarto
 
 Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
