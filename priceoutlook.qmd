@@ -1,7 +1,8 @@
 ---
-title: "Rice Price Outlook: Trends and Implications"
-subtitle: "Tracking global and its impact on local rice price movements"
-author: "PhilRice Data Analytics Center"
+title: "Rice Price Outlook"
+subtitle: "Trends and Implications"
+author: "Data Analytics Center"
+institute: "Philippine Rice Research Institute"
 # format: revealjs
 format:
   revealjs:
@@ -33,7 +34,6 @@ library(jsonlite)
 library(httr)
 
 ```
-
 
 ```{r}
 #|label: data_fetching
@@ -84,13 +84,250 @@ url_list <-  list(
 
 data <- lapply(url_list, function(x) data_api(x, key))
 
+flag_if_late <- function(date) {
+  delay <- interval(date, Sys.Date()) %/% months(1)
+  if (delay > 0) {
+    paste0(as.character(date), strrep("*", delay))
+  } else {
+    as.character(date)
+  }
+}
+
+mostrecentdate_api <- lapply(data, function(x) x |> 
+                               slice_max(order_by = id) |> 
+                               pull(monthyr) |> 
+                               as.Date("%m/%d/%Y")
+  )
+mostrecentdate_api_flagged <- lapply(mostrecentdate_api,flag_if_late)
+data_external <- list()
 
 
+# data_external[["stocks"]] <-  read_csv("external_data/stocks.csv") |> 
+#   mutate(mth = match(Month,month.name),
+#          date = ymd(paste(Year,mth,"01"))) |> 
+#   select(-c(Year,Month,mth)) |> 
+#   relocate(date,.before=1)
+
+# saveRDS(data_external[["stocks"]],"external_data/stocks.rds")
+data_external[["stocks"]] <- readRDS("external_data/stocks.rds")
+
+
+update_msg <- 
+paste("Most recent DATA as of: ", Sys.Date(),
+          "\nFROM DATA LAKE APIs",
+          "\n--1. PSA Wholesale Prices: ", mostrecentdate_api_flagged$wholesale_prices,
+          "\n--2. PSA Retail Prices: ", mostrecentdate_api_flagged$retail_prices,
+          "\n--3. FAO FOB prices: ", mostrecentdate_api_flagged$fao_fob_prices,
+          "\n--4. VFA FOB prices: ", mostrecentdate_api_flagged$vfa_fob_prices,
+          "\n--5. BSP Exchnge rates: ", mostrecentdate_api_flagged$exrates,
+          "\n--6. PSA Farmgate Prices: ", mostrecentdate_api_flagged$farmgate_prices,
+          "\n\n",
+          "FROM app local files",
+          "\n--1. PSA rice total stocks: ", flag_if_late(data_external[["stocks"]] |> 
+          filter(Stock=="Total") |> na.omit() |> slice_max(order_by = date) |> pull(date)),
+        "\n\n* Each asterisk (*) indicates the data is late by one month."
+  )
+
+message(update_msg)
 ```
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
 
 ```{r}
-1 + 1
+#| label: data_editing
+#| echo: false
+
+calculate_ipp <- function(fob,
+                          importation_cost=62.42,
+                          exchange_rate,
+                          tariff_rate=0.15, 
+                          local_transpo=1443,
+                          milling_recovery=.63,
+                          total_marketing_cost=9.5) 
+{cif <- fob + importation_cost
+tariff_amount <- (tariff_rate) *(cif *exchange_rate)
+ipp_ton <- ((cif * exchange_rate) + tariff_amount + local_transpo)
+
+
+ipp_ton / 1000
+
+}
+  
+
+data_edited <- list()
+
+data_edited[["wholesale_prices"]] <- 
+  data$wholesale_prices |> 
+  mutate(date = mdy(monthyr)) |> 
+  mutate_at(vars(wmr,rmr),as.numeric) |> 
+  select(-c(monthyr,created_at,updated_at)) |> 
+  relocate(date,.before=1) |> 
+  pivot_longer(c(wmr,rmr), names_to = 'type',values_to = 'price') |> 
+  arrange(date, type)
+
+data_edited[["retail_prices"]] <- 
+  data$retail_prices |> 
+  mutate(date = mdy(monthyr)) |> 
+  mutate_at(vars(wmr,rmr),as.numeric) |> 
+  select(-c(monthyr,created_at,updated_at)) |> 
+  relocate(date,.before=1) |> 
+  pivot_longer(c(wmr,rmr), names_to = 'type',values_to = 'price') |> 
+  arrange(date, type)
+  
+data_edited[["farmgate_prices"]] <- 
+  data$farmgate_prices |> 
+  mutate(date = mdy(monthyr),
+         farmgate = as.numeric(farmgate),
+         farmgate_rice = farmgate/0.63) |> 
+  select(-c(monthyr,created_at,updated_at)) |> 
+  relocate(date,.before=1) |> 
+  arrange(date)
+
+
+data_edited[["farmgate_prices"]] <- 
+  data$farmgate_prices |> 
+  mutate(date = mdy(monthyr),
+         farmgate = as.numeric(farmgate),
+         farmgate_rice = farmgate/0.63) |> 
+  select(-c(monthyr,created_at,updated_at)) |> 
+  relocate(date,.before=1) |> 
+  arrange(date)
+
+data_edited[["ipp"]] <- 
+  data$fao_fob_prices |>
+  left_join(data$exrates |> select(monthyr,exrates), by="monthyr") |> 
+  mutate(date =mdy(monthyr),
+         price = as.numeric(value),
+         exrates = as.numeric(exrates)) |> 
+    select(-c(monthyr,value,created_at,updated_at)) |> 
+  relocate(date,.before=1) |>
+  mutate(ipp = pmap_dbl(list(price,exrates),
+                        function(price,exrates)
+                          calculate_ipp(fob = price, exchange_rate = exrates)
+  )
+  )
+  
+data_edited[["ipp_ave"]] <- 
+  data_edited[["ipp"]] |>
+  reframe(price = mean(ipp,na.rm=TRUE), .by = date)
+
 ```
+
+## Global and Local Price Trends {.tiny-text}
+
+### Are they moving together? {.extra-tiny-text}
+
+```{r}
+#| label: pricetrends
+
+
+
+
+plot_ly() %>%
+  add_lines(data =data_edited[["wholesale_prices"]] |> 
+              filter(type =="rmr"),
+            x = ~date,
+            y = ~price,
+            name = "Wholesale Price (RMR)",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"),
+            line = list(color = "darkorange")
+  ) |> 
+  add_lines(data =data_edited[["retail_prices"]] |> 
+              filter(type =="rmr"),
+            x = ~date,
+            y = ~price,
+            name = "Retail Price (RMR)",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"),
+            line = list(color = "darkgreen")
+  ) |> 
+  add_lines(data =  data_edited[["farmgate_prices"]],
+            x = ~date,
+            y = ~farmgate_rice,
+            name = "Farmgate price (rice equivalent)",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"),
+            line = list(color = "blue")) |> 
+  add_lines(data =data_edited[["ipp_ave"]],
+            x=~date,
+            y=~price,
+            name = "Average Import parity Price (IPP) across major importing countries",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "black", dash = "dash")) |>
+    add_lines(data =data_edited[["ipp"]] |> 
+                filter(type == "Vietnam 25%"),
+            x=~date,
+            y=~ipp,
+            name = ~paste(type," IPP"),
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "#FF3F3F", dash = "dash")) |>
+      add_lines(data =data_edited[["ipp"]] |> 
+                filter(type == "Thai 25%"),
+            x=~date,
+            y=~ipp,
+            name = ~paste(type," IPP"),
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "#65DA65", dash = "dash")) |>
+      add_lines(data =data_edited[["ipp"]] |> 
+                filter(type == "Pakistan 25%"),
+            x=~date,
+            y=~ipp,
+            name = ~paste(type," IPP"),
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "#EE82EE", dash = "dash")) |>
+layout(hovermode='x unified',
+         xaxis = list(title = "Date",visible = T , showgrid=T,
+                      range = c("2024-01-01", "2025-06-01")),
+         yaxis = list(title = "Rice Price (₱/kg)",visible =T , showgrid=T),
+         yaxis2 = list(
+           title = list(text = "Farmgate price",
+                        standoff = 20),
+           overlaying = "y",
+           side = "right",
+           titlefont = list(size = 12),
+           tickfont = list(size = 10),
+           visible =T,
+           automargin = T,
+           showgrid=T
+         ),
+         # legend = list(
+         #   x=0,
+         #   y=-1,
+         #   xanchor='left',
+         #   yanchor='top',
+         #   orientation = 'h'
+         # ),
+         showlegend = F) |> 
+  rangeslider()
+```
+
+::: {.horizontal-legend style="display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; margin-top: 0.5rem; gap: 0.2rem;"}
+
+<div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;">
+
+  <span><span style="display:inline-block;width:30px;height:3px;background:darkorange;margin-right:5px;vertical-align:middle;"></span>Wholesale Price (RMR)</span>
+
+  <span><span style="display:inline-block;width:30px;height:3px;background:darkgreen;margin-right:5px;vertical-align:middle;"></span>Retail Price (RMR)</span>
+
+  <span><span style="display:inline-block;width:30px;height:3px;background:blue;margin-right:5px;vertical-align:middle;"></span>Farmgate price (rice equivalent)</span>
+
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-top: 0.1rem;">
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed black;margin-right:5px;vertical-align:middle;"></span>Average Import parity Price (IPP)  across major importing countries</span>
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed red;margin-right:5px;vertical-align:middle;"></span>Vietnam 25% IPP</span>
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed limegreen;margin-right:5px;vertical-align:middle;"></span>Thai 25% IPP</span>
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed violet;margin-right:5px;vertical-align:middle;"></span>Pakistan 25% IPP</span>
+
+</div>
+
+:::
+
+
