@@ -1220,7 +1220,7 @@ layout(hovermode='x unified',
                        automargin = TRUE,
                        showgrid=T),
        yaxis = list(title = "% Decline ",
-                    # range = c(0, 20),
+                    range = c(0, 35),
                   side = "right", 
                   showgrid = F),
        legend = list(
