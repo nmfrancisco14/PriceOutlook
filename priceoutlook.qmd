@@ -32,6 +32,9 @@ library(htmltools)
 library(plotly)
 library(jsonlite)
 library(httr)
+library(DiagrammeR)
+library(lmtest)
+library(knitr)
 
 ```
 
@@ -108,9 +111,30 @@ data_external <- list()
 #   select(-c(Year,Month,mth)) |> 
 #   relocate(date,.before=1)
 
-# saveRDS(data_external[["stocks"]],"external_data/stocks.rds")
+# 
+# data_external[["riceinf"]] <-  read_csv("external_data/riceinflation.csv") |>
+#   mutate(mth = match(Period,month.abb),
+#          date = ymd(paste(Year,mth,"01"))) |>
+#   select(-c(Year,Period,mth)) |>
+#   relocate(date,.before=1)
+# 
+# saveRDS(data_external[["riceinf"]],"external_data/riceinflation.rds")
+
+# data_external[["imports"]] <-  read_csv("external_data/imports.csv") |>
+#   mutate(mth = match(Month,month.abb),
+#          date = ymd(paste(Year,mth,"01"))) |>
+#   select(date,Imports) |>
+#   relocate(date,.before=1)
+# 
+# saveRDS(data_external[["imports"]] ,"external_data/imports.rds")
+
+
+data_external[["riceinf"]] <- readRDS("external_data/riceinflation.rds")
+
+
 data_external[["stocks"]] <- readRDS("external_data/stocks.rds")
 
+data_external[["imports"]] <- readRDS("external_data/imports.rds")
 
 update_msg <- 
 paste("Most recent DATA as of: ", Sys.Date(),
@@ -123,9 +147,17 @@ paste("Most recent DATA as of: ", Sys.Date(),
           "\n--6. PSA Farmgate Prices: ", mostrecentdate_api_flagged$farmgate_prices,
           "\n\n",
           "FROM app local files",
-          "\n--1. PSA rice total stocks: ", flag_if_late(data_external[["stocks"]] |> 
-          filter(Stock=="Total") |> na.omit() |> slice_max(order_by = date) |> pull(date)),
-        "\n\n* Each asterisk (*) indicates the data is late by one month."
+      "\n--1. PSA rice total stocks: ", flag_if_late(data_external[["stocks"]] |> 
+                                                       filter(Stock=="Total") |> na.omit() |> slice_max(order_by = date) |> pull(date)),
+      "\n--2. PSA rice inflation: ",
+      flag_if_late(data_external[["riceinf"]] |>
+                     slice_max(order_by = date) |> pull(date)),
+      "\n--3. PSA/BOC Imports: ",
+      flag_if_late(data_external[["imports"]] |>
+                     slice_max(order_by = date) |> pull(date)),
+      
+      "\n\n* Each asterisk (*) indicates the data is late by one month."
+      
   )
 
 message(update_msg)
@@ -209,19 +241,21 @@ data_edited[["ipp_ave"]] <-
   data_edited[["ipp"]] |>
   reframe(price = mean(ipp,na.rm=TRUE), .by = date)
 
-```
 
-## Global and Local Price Trends {.tiny-text}
+pricedata_comb <- 
+data_edited$ipp_ave |> 
+  rename(ipp=price) |> 
+  left_join(data_edited$retail_prices |> filter(type=="rmr") |> select(date,rprice=price)) |> 
+  
+  left_join(data_edited$wholesale_prices |> filter(type=="rmr") |> select(date,wprice=price)) |> 
+  
+  left_join(data_edited$farmgate_prices |> select(date,farmgate)) |> 
+  left_join(data_edited$ipp |> filter(type=="Vietnam 25%") |> select(date,viet_price=price)) |> 
+  left_join(data_edited$ipp |> filter(type=="Thai 25%") |> select(date,thai_price=price)) |> 
+  left_join(data_edited$ipp |> filter(type=="Pakistan 25%") |> select(date,pak_price=price))
 
-### Are they moving together? {.extra-tiny-text}
-
-```{r}
-#| label: pricetrends
-
-
-
-
-plot_ly() %>%
+base_plot <- 
+plot_ly(width="1000",height="400") %>%
   add_lines(data =data_edited[["wholesale_prices"]] |> 
               filter(type =="rmr"),
             x = ~date,
@@ -279,8 +313,7 @@ plot_ly() %>%
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#EE82EE", dash = "dash")) |>
 layout(hovermode='x unified',
-         xaxis = list(title = "Date",visible = T , showgrid=T,
-                      range = c("2024-01-01", "2025-06-01")),
+         xaxis = list(title = "Date",visible = T , showgrid=T),
          yaxis = list(title = "Rice Price (₱/kg)",visible =T , showgrid=T),
          yaxis2 = list(
            title = list(text = "Farmgate price",
@@ -293,31 +326,175 @@ layout(hovermode='x unified',
            automargin = T,
            showgrid=T
          ),
-         # legend = list(
-         #   x=0,
-         #   y=-1,
-         #   xanchor='left',
-         #   yanchor='top',
-         #   orientation = 'h'
-         # ),
          showlegend = F) |> 
   rangeslider()
+
+
+ipp_spikes <- ymd(c("2023-08-01","2024-01-01","2024-06-01","2024-12-01"))
+
 ```
 
-::: {.horizontal-legend style="display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; margin-top: 0.5rem; gap: 0.2rem;"}
+## Global and Local Price Trends {.tiny-text auto-animate="true"}
 
-<div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;">
+::: r-stack
+::: {.fragment fragment-index="1"}
+::: {.fragment .fade-out fragment-index="2"}
+Historical trends (2016-2025) of local rice prices (farmgate, retail and wholesale) and global import parity prices.
+:::
+:::
 
+::: {.fragment .fade-in fragment-index="2"}
+::: {.fragment .fade-out fragment-index="4"}
+Global and local rice price trends are **synchronized with delayed responses**
+:::
+:::
+
+::: {.fragment .fade-in fragment-index="4"}
+Global price transmission visually noticeable for **two months after the spike**.
+:::
+:::
+
+::: r-stack
+::: {.fragment fragment-index="1"}
+```{r}
+#| label: pricetrends
+#| data-id: plot
+
+
+base_plot
+
+```
+:::
+
+::: {.fragment fragment-index="2"}
+```{r}
+#| label: pricetrends_recent
+#| data-id: plot
+
+base_plot |> 
+  layout(xaxis=list(range = c("2023-06-01", "2025-06-01")))
+
+```
+:::
+
+::: {.fragment .fade-in fragment-index="3"}
+```{r}
+#| label: withspikes
+#| data-id: plot
+
+
+spike_plot <- 
+base_plot |> 
+    layout(
+      xaxis=list(range = c("2023-06-01", "2025-06-01")),
+    shapes = c(
+      # 1) vertical dashed lines
+      lapply(ipp_spikes, function(d) list(
+        type = "line",
+        x0 = d, x1 = d,
+        y0 = 0, y1 = 1,
+        yref = "paper",
+        line = list(color = "red", dash = "dot")
+      ))),
+    annotations = c(
+      # 3a) “Global Price Spike” labels above the dashed lines
+      lapply(ipp_spikes, function(d) list(
+        x        = d,
+        y        = 1.05,
+        xref     = "x",
+        yref     = "paper",
+        text     = "Global Price Spike",
+        showarrow= FALSE,
+        font     = list(size = 10, color = "red")
+      ))
+    )
+  )
+
+spike_plot
+
+```
+:::
+
+::: {.fragment .fade-in fragment-index="4"}
+```{r}
+#| label: withdelayedresponse
+#| data-id: plot
+
+ lag_plot <- 
+  base_plot |> 
+  layout(
+    xaxis=list(range = c("2023-06-01", "2025-06-01")),
+    shapes = c(
+      # vertical dashed lines
+      lapply(ipp_spikes, function(d) list(
+        type = "line",
+        x0 = d, x1 = d,
+        y0 = 0, y1 = 1,
+        yref = "paper",
+        line = list(color = "red", dash = "dot")
+      )),
+      # shaded 2‑month rectangles
+      lapply(ipp_spikes, function(d) {
+        start <- as.Date(d)
+        end   <- start %m+% months(2)
+        list(
+          type      = "rect",
+          x0        = start,
+          x1        = end,
+          y0        = 0,
+          y1        = 1,
+          yref      = "paper",
+          fillcolor = "rgba(200,200,200,0.2)",
+          line      = list(width = 0)
+        )
+      })
+    ),
+    #annotations
+    annotations = c(
+      # “Global Price Spike” labels above the dashed lines
+      lapply(ipp_spikes, function(d) list(
+        x        = d,
+        y        = 1.05,
+        xref     = "x",
+        yref     = "paper",
+        text     = "Global Price Spike",
+        showarrow= FALSE,
+        font     = list(size = 10, color = "red")
+      )),
+      #shaded annot
+      lapply(ipp_spikes, function(d) {
+        mid   <- as.Date(d) + months(1)
+        list(
+          x         = as.character(mid),
+          y         = 0.5,
+          xref      = "x",
+          yref      = "paper",
+          textangle = -90,
+          text      = "Delayed response to local price",
+          showarrow = FALSE,
+          font      = list(size =  11, color = "grey20"),
+          align     = "center"
+        )
+      })
+    )
+  )
+
+lag_plot
+
+```
+:::
+:::
+
+:::: {.horizontal-legend .fragment fragment-index="1" style="display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; margin-top: 0.5rem; gap: 0.2rem;"}
+::: {style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;"}
   <span><span style="display:inline-block;width:30px;height:3px;background:darkorange;margin-right:5px;vertical-align:middle;"></span>Wholesale Price (RMR)</span>
 
   <span><span style="display:inline-block;width:30px;height:3px;background:darkgreen;margin-right:5px;vertical-align:middle;"></span>Retail Price (RMR)</span>
 
   <span><span style="display:inline-block;width:30px;height:3px;background:blue;margin-right:5px;vertical-align:middle;"></span>Farmgate price (rice equivalent)</span>
+:::
 
-</div>
-
-<div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-top: 0.1rem;">
-
+::: {style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-top: 0.1rem;"}
   <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed black;margin-right:5px;vertical-align:middle;"></span>Average Import parity Price (IPP)  across major importing countries</span>
 
   <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed red;margin-right:5px;vertical-align:middle;"></span>Vietnam 25% IPP</span>
@@ -326,8 +503,352 @@ layout(hovermode='x unified',
 
   <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed violet;margin-right:5px;vertical-align:middle;"></span>Pakistan 25% IPP</span>
 
-</div>
+:::
+::::
+
+## Evidence of Price transmission {.tiny-text auto-animate="true"}
+
+
+:::: r-stack
+
+::: {.fragment fragment-index="1"}
+::: {.fragment .fade-out fragment-index="2"}
+Using Cross-Correlation function (CCF) to detect time lag effects of global rice prices or delayed response of local rice prices
+:::
+:::
+
+::: {.fragment .fade-in-then-out .tiny-text fragment-index="2"}
+### Average IPP price (Global) → Local Retail price
+
+CCF plot shows that the Average IPP prices significantly leads ( *affect* ) local rice retail price by up to **9 months**, with the strongest effect at lag **0 to +4**, and still meaningful influence up to lag **6–9**.
+
+No substantial correlation observed on negative lags, ruling out local retail prices driving global trends.
+:::
+
+::: {.fragment .fade-in-then-out .tiny-text fragment-index="3"}
+### Average IPP price (Global) → Local Farmgate price
+
+CCF plot shows that the Average IPP prices significantly leads ( *indirectly affect* ) local farmgate price by up to **10 months**, with the strongest effect at lag **0 to +3**, and still meaningful influence up to lag **6** with fading impact from **8 - 10** months.
+
+No reason to believe that farmgate prices leads IPP prices, since it's economical implausible (Philippines being a price taker). Therefore, substantial correlation observed on negative lags can be ignored and might just be a result of shared long-term trend and/or spurious correlation.
+:::
+
+::: {.fragment .fade-in-then-out .extra-tiny-text fragment-index="4"}
+### Local Retail price ↔ Local Farmgate price
+
+The CCF plot reveals a **two-way relationship** between local retail and farmgate rice prices, with both series responding rapidly to each other’s changes.
+
+However, retail prices appear to lead farmgate prices more strongly, with the highest correlations observed at lag **0 to +2**, and a meaningful influence extending up to **6 months**.
+
+In contrast, farmgate prices show a weaker and shorter lead, potentially influencing retail prices by only up to **1 month**.
+
+This asymmetry, combined with the strong correlation between global prices (IPP) and retail prices, supports the conclusion that **global price movements primarily influence farmgate prices indirectly—through their immediate impact on retail markets**.
+:::
+
+::: {.tiny-text .fragment .fade-in-then-out fragment-index=5}
+
+Results from the Granger causality test provide sufficient evidence that global rice prices (as estimated by the average Import Parity Price or IPP) Granger-cause local retail prices, indicating that global price movements have a statistically significant influence on retail markets within a 2-month window.
+
+Similarly, local retail prices Granger-cause farmgate prices, with effects unfolding over a 6-month period, suggesting that price changes at the consumer level gradually influence prices received by farmers.
+:::
+
+::: {.tiny-text .fragment .fade-in-then-out fragment-index=6}
+
+In contrast, while the cross-correlation function (CCF) reveals a strong association between global and farmgate prices, the Granger causality test does not detect a direct predictive relationship.
+
+This divergence suggests that the observed correlation may result from indirect transmission, where global prices influence farmgate prices only through their effect on retail prices. 
+:::
+
+::::
+
+:::: r-stack
+::: {.fragment fragment-index="1"}
+::: {.fragment .fade-out fragment-index=3}
+```{r}
+#|label: ccf1
+
+
+ccf_ipp_rprice <- ccf(pricedata_comb$ipp,pricedata_comb$rprice,plot = F, lag.max = 12)
+
+ccf_ipp_fprice <- ccf(pricedata_comb$ipp,pricedata_comb$farmgate,plot = F)
+
+ccf_rprice_fprice <- ccf(pricedata_comb$rprice,pricedata_comb$farmgate,plot = F)
+
+
+ccfDF_ipp_rprice <- data.frame(
+  Lag = ccf_ipp_rprice$lag,
+  Correlation = ccf_ipp_rprice$acf
+)
+
+plot_ly(ccfDF_ipp_rprice, 
+        x = ~Lag, 
+        y = ~Correlation, 
+        type = "bar", 
+        name = "CCF_ipp_rprice",
+        width = 1000,
+        height = 400) %>%
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
+         ))
+
+
+```
+:::
+:::
+
+::: {.fragment .fade-in-then-out fragment-index=3}
+```{r}
+#|label: ccf2
+
+
+ccf_ipp_fprice <- ccf(pricedata_comb$ipp,pricedata_comb$farmgate,plot = F,lag.max = 12)
+
+
+ccfDF_ipp_fprice <- data.frame(
+  Lag = ccf_ipp_fprice$lag,
+  Correlation = ccf_ipp_fprice$acf
+)
+
+plot_ly(ccfDF_ipp_fprice, 
+        x = ~Lag, 
+        y = ~Correlation, 
+        type = "bar", 
+        name = "CCF_ipp_fprice",
+        width = 1000,
+        height = 400) %>%
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
+         ))
+
+
+```
+:::
+
+::: {.fragment .fade-in-then-out fragment-index=4}
+```{r}
+#|label: ccf3
+
+
+ccf_rprice_fprice <- ccf(pricedata_comb$rprice,pricedata_comb$farmgate,plot = F,lag.max = 12)
+
+
+ccfDF_rprice_fprice <- data.frame(
+  Lag = ccf_rprice_fprice$lag,
+  Correlation = ccf_rprice_fprice$acf
+)
+
+plot_ly(ccfDF_rprice_fprice, 
+        x = ~Lag, 
+        y = ~Correlation, 
+        type = "bar", 
+        name = "CCF_rprice_fprice",
+        width = 1000,
+        height = 400) %>%
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
+         ))
+
+
+```
+:::
+
+::: {.fragment .fade-in-then-out fragment-index=5}
+```{r}
+#| label: granger1
+#| echo: false
+
+# Create lagged series (optional: use VARselect to pick lag)
+
+# Run Granger test with lag = 3
+granger1 <- grangertest(rprice ~ ipp, 
+                        order = 2, 
+                        data = pricedata_comb)
+
+granger2 <- grangertest(farmgate ~ ipp, 
+                        order = 2, 
+                        data = pricedata_comb)
+
+granger3 <- grangertest(farmgate ~ rprice, 
+                        order = 6, 
+                        data = pricedata_comb)
+
+
+granger_summary <- tribble(
+  ~Relationship,              ~Lag_Order, ~F_Statistic, ~p_Value, ~Significant,
+  "Global (IPP) → Local Retail",               2,    round(granger1$`F`[2], 3),  round(granger1$`Pr(>F)`[2], 4), ifelse(granger1$`Pr(>F)`[2] < 0.05, "Yes", "No"),
+  "Global (IPP) → Local Farmgate",            2,    round(granger2$`F`[2], 3),  round(granger2$`Pr(>F)`[2], 4), ifelse(granger2$`Pr(>F)`[2] < 0.05, "Yes", "No"),
+  "Local Retail → Local Farmgate",            6,    round(granger3$`F`[2], 3),  round(granger3$`Pr(>F)`[2], 4), ifelse(granger3$`Pr(>F)`[2] < 0.05, "Yes", "No")
+)
+
+kable(granger_summary, format = "markdown", 
+      caption = "Granger Causality Summary table at maximum lags with significant granger causality")
+
+
+```
+:::
+::: {.fragment .fade-in-then-out fragment-index=6}
+```{dot}
+
+digraph {
+  rankdir = LR
+  graph [fontname="Helvetica"]
+  node  [fontname="Helvetica", shape=box, style=filled, fillcolor=lightyellow]
+  edge  [fontname="Helvetica"]
+
+  A [label="🌍 Global Price"]
+  B [label="🛒 Local Retail Price"]
+  C [label="🚜 Farmgate Price"]
+
+  A -> B [label="Lag 0–2 months", color="darkgreen"]
+  A -> C [label="Lag 0–3 months (indirect)", style="dashed", color="darkorange"]
+  B -> C [label="Lag 0–6 months", color="steelblue"]
+}
+
+```
+:::
+::::
+
+## Effect on Rice Inflation {.tiny-text auto-animate=true}
+
+
+Since the start of 2025, declining global and local rice prices have contributed to negative rice inflation, easing upward pressure on overall prices. Given rice’s high weight in the consumer basket, this drop has significantly helped slow down headline inflation.
+
+
+
+```{r}
+base_plot |> 
+  add_lines(data = data_external[["riceinf"]] |> 
+              filter(date>=ymd("2016-01-01")),
+            x=~date,
+            y=~Rice,
+            name = "Rice inflation rate",
+            line = list(color = "#fbbb18", width = 1),
+            fill = "tozeroy",
+            fillcolor = "rgba(254, 234, 22,0.3)",
+            yaxis="y2",
+            hovertemplate = paste0(
+                        "Rice Inflation: ",
+                        "%{y:,.2f} %<extra></extra>"
+                      )
+            ) |> 
+  layout(
+    xaxis=list(range = c("2023-06-01", "2025-06-01")),
+    yaxis2 = list(title = "Rice Inflation (%)", 
+                  overlaying = "y",
+                  side = "right", 
+                  showgrid = FALSE,
+                  titlefont = list(size = 14),
+                  tickfont = list(size = 12),
+                  automargin = TRUE),
+    margin = list(l = 50, r = 50, t = 50, b = 50)
+  )
+
+```
+
+:::: {.horizontal-legend style="display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; margin-top: 0.5rem; gap: 0.2rem;"}
+::: {style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;"}
+  <span><span style="display:inline-block;width:30px;height:3px;background:darkorange;margin-right:5px;vertical-align:middle;"></span>Wholesale Price (RMR)</span>
+
+  <span><span style="display:inline-block;width:30px;height:3px;background:darkgreen;margin-right:5px;vertical-align:middle;"></span>Retail Price (RMR)</span>
+
+  <span><span style="display:inline-block;width:30px;height:3px;background:blue;margin-right:5px;vertical-align:middle;"></span>Farmgate price (rice equivalent)</span>
+:::
+
+::: {style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-top: 0.1rem;"}
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed black;margin-right:5px;vertical-align:middle;"></span>Average Import parity Price (IPP)  across major importing countries</span>
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed red;margin-right:5px;vertical-align:middle;"></span>Vietnam 25% IPP</span>
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed limegreen;margin-right:5px;vertical-align:middle;"></span>Thai 25% IPP</span>
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed violet;margin-right:5px;vertical-align:middle;"></span>Pakistan 25% IPP</span>
 
 :::
+::::
+
+## Imports and stock levels {.tiny-text auto-animate=true}
+
+:::: {.r-stack}
+
+::: {.fragment .tiny-text}
+Since early 2025, both global rice prices and domestic retail and farmgate prices in the Philippines have been on a gradual downward trend, yet import volumes have remained erratic rather than steadily rising. Import volume have oscillated, with notable spikes in April and June. This suggests non-price related factors influencing trade dynamics such as opportunistic buying when import parity margins widened; shifts in government import policies; traders and authorities adjusting to fluctuating demand forecasts or logistical bottlenecks.
+
+```{r}
+
+base_plot |> 
+    add_lines(data = data_external[["imports"]] |> 
+              filter(date>=ymd("2016-01-01")),
+            x=~date,
+            y=~Imports,
+            name = "Rice imports",
+            line = list(color = "#fbbb18", width = 1),
+            fill = "tozeroy",
+            fillcolor = "rgba(254, 234, 22,0.3)",
+            yaxis="y2",
+            hovertemplate = paste0(
+                        "Rice imports: ",
+                        "%{y:,.2f} %<extra></extra>"
+                      )
+            ) |> 
+  layout(
+    xaxis=list(range = c("2023-06-01", "2025-06-01")),
+    yaxis2 = list(title = "Rice imports (mt)", 
+                  overlaying = "y",
+                  side = "right", 
+                  showgrid = FALSE,
+                  titlefont = list(size = 14),
+                  tickfont = list(size = 12),
+                  automargin = TRUE),
+    margin = list(l = 50, r = 50, t = 50, b = 50)
+  )
+
+
+```
+
+:::: {.horizontal-legend style="display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; margin-top: 0.5rem; gap: 0.2rem;"}
+::: {style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;"}
+  <span><span style="display:inline-block;width:30px;height:3px;background:darkorange;margin-right:5px;vertical-align:middle;"></span>Wholesale Price (RMR)</span>
+
+  <span><span style="display:inline-block;width:30px;height:3px;background:darkgreen;margin-right:5px;vertical-align:middle;"></span>Retail Price (RMR)</span>
+
+  <span><span style="display:inline-block;width:30px;height:3px;background:blue;margin-right:5px;vertical-align:middle;"></span>Farmgate price (rice equivalent)</span>
+:::
+
+::: {style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-top: 0.1rem;"}
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed black;margin-right:5px;vertical-align:middle;"></span>Average Import parity Price (IPP)  across major importing countries</span>
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed red;margin-right:5px;vertical-align:middle;"></span>Vietnam 25% IPP</span>
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed limegreen;margin-right:5px;vertical-align:middle;"></span>Thai 25% IPP</span>
+
+  <span><span style="display:inline-block;width:30px;height:0px;border-bottom:2px dashed violet;margin-right:5px;vertical-align:middle;"></span>Pakistan 25% IPP</span>
+
+:::
+
+:::
+
+::::
+
+::::
+
+## Month-on-Month comparison (2024v2025) {.tiny-text auto-animate=true}
+
+
+
 
 

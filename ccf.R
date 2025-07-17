@@ -13,14 +13,16 @@ data_edited$ipp_ave |>
   left_join(data_edited$wholesale_prices |> filter(type=="rmr") |> select(date,wprice=price)) |> 
   
   left_join(data_edited$farmgate_prices |> select(date,farmgate)) |> 
-  left_join(data_edited$ipp |> filter(type=="Vietnam 25%") |> select(date,viet_price=price)) 
+  left_join(data_edited$ipp |> filter(type=="Vietnam 25%") |> select(date,viet_price=price)) |> 
+  left_join(data_edited$ipp |> filter(type=="Thai 25%") |> select(date,thai_price=price)) |> 
+  left_join(data_edited$ipp |> filter(type=="Pakistan 25%") |> select(date,pak_price=price)) 
 
 
 ccf(pricedata$viet_price,pricedata$rprice, lag.max=12)
 
 
 library(tseries)
-adf.test(pricedata$farmgate)
+adf.test(pricedata_comb$ipp)
 
 ccf(pricedata$rprice,pricedata$farmgate, lag.max=12)
 
