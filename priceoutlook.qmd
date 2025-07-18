@@ -105,11 +105,13 @@ mostrecentdate_api_flagged <- lapply(mostrecentdate_api,flag_if_late)
 data_external <- list()
 
 
-# data_external[["stocks"]] <-  read_csv("external_data/stocks.csv") |> 
+# data_external[["stocks"]] <-  read_csv("external_data/stocks.csv") |>
 #   mutate(mth = match(Month,month.name),
-#          date = ymd(paste(Year,mth,"01"))) |> 
-#   select(-c(Year,Month,mth)) |> 
+#          date = ymd(paste(Year,mth,"01"))) |>
+#   select(-c(Year,Month,mth)) |>
 #   relocate(date,.before=1)
+# 
+# saveRDS(data_external[["stocks"]] ,"external_data/stocks.rds")
 
 # 
 # data_external[["riceinf"]] <-  read_csv("external_data/riceinflation.csv") |>
