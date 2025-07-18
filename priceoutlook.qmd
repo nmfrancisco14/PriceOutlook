@@ -10,6 +10,7 @@ format:
     touch: true
     controls: true
     slide-number: true
+    pdf-separate-fragments: true
     transition: fade
     chalkboard: 
       buttons: false
@@ -35,6 +36,7 @@ library(httr)
 library(DiagrammeR)
 library(lmtest)
 library(knitr)
+library(purrr)
 
 ```
 
@@ -254,7 +256,11 @@ data_edited$ipp_ave |>
   left_join(data_edited$farmgate_prices |> select(date,farmgate)) |> 
   left_join(data_edited$ipp |> filter(type=="Vietnam 25%") |> select(date,viet_price=price)) |> 
   left_join(data_edited$ipp |> filter(type=="Thai 25%") |> select(date,thai_price=price)) |> 
-  left_join(data_edited$ipp |> filter(type=="Pakistan 25%") |> select(date,pak_price=price))
+  left_join(data_edited$ipp |> filter(type=="Pakistan 25%") |> select(date,pak_price=price)) |> 
+  left_join(data_external$imports) |> 
+  left_join(data_external$stocks |> 
+              pivot_wider(names_from=Stock,
+                          values_from=Inventory))
 
 pricedata_yoy <- 
 pricedata_comb |> 
@@ -269,7 +275,7 @@ pricedata_comb |>
 
 
 base_plot <- 
-plot_ly(width="1000",height="500") %>%
+plot_ly(width="1000",height="500") |>
   add_lines(data =data_edited[["wholesale_prices"]] |> 
               filter(type =="rmr"),
             x = ~date,
@@ -362,6 +368,33 @@ layout(hovermode='x unified',
 ipp_spikes <- ymd(c("2023-08-01","2024-01-01","2024-06-01","2024-12-01"))
 
 ```
+```{r}
+#| label: ccfresults
+#| echo: false
+#| 
+vars <- setdiff(names(pricedata_comb), c("date", "farmgate"))
+
+ccf_results <- map(vars, ~ list(
+  rprice  = ccf(pricedata_comb[[.x]], pricedata_comb$rprice,   plot = FALSE, lag.max = 12),
+  fprice  = ccf(pricedata_comb[[.x]], pricedata_comb$farmgate, plot = FALSE, lag.max = 12)
+))
+
+names(ccf_results) <- vars
+
+
+ccf_dfs <- map(ccf_results, ~ list(
+  rprice = data.frame(
+    Lag = .x$rprice$lag,
+    Correlation = .x$rprice$acf
+  ),
+  fprice = data.frame(
+    Lag = .x$fprice$lag,
+    Correlation = .x$fprice$acf
+  )
+))
+
+```
+
 
 ## Global and Local Price Trends {.tiny-text auto-animate="true"}
 
@@ -514,26 +547,6 @@ lag_plot
 :::
 :::
 
-<!-- ::: {.horizontal-legend .fragment fragment-index="1" style="display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; margin-top: 0.5rem; gap: 0.2rem;"} -->
-<!-- ::: {style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;"} -->
-<!-- Wholesale Price (RMR) -->
-
-<!-- Retail Price (RMR) -->
-
-<!-- Farmgate price (rice equivalent) -->
-<!-- ::: -->
-
-<!-- ::: {style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-top: 0.1rem;"} -->
-<!-- Average Import parity Price (IPP) across major importing countries -->
-
-<!-- Vietnam 25% IPP -->
-
-<!-- Thai 25% IPP -->
-
-<!-- Pakistan 25% IPP -->
-<!-- ::: -->
-<!-- ::: -->
-
 ## Evidence of Price transmission {.tiny-text auto-animate="true"}
 
 ::: r-stack
@@ -591,25 +604,14 @@ This divergence suggests that the observed correlation may result from indirect 
 #|label: ccf1
 
 
-ccf_ipp_rprice <- ccf(pricedata_comb$ipp,pricedata_comb$rprice,plot = F, lag.max = 12)
 
-ccf_ipp_fprice <- ccf(pricedata_comb$ipp,pricedata_comb$farmgate,plot = F)
-
-ccf_rprice_fprice <- ccf(pricedata_comb$rprice,pricedata_comb$farmgate,plot = F)
-
-
-ccfDF_ipp_rprice <- data.frame(
-  Lag = ccf_ipp_rprice$lag,
-  Correlation = ccf_ipp_rprice$acf
-)
-
-plot_ly(ccfDF_ipp_rprice, 
+plot_ly(ccf_dfs$ipp$rprice, 
         x = ~Lag, 
         y = ~Correlation, 
         type = "bar", 
         name = "CCF_ipp_rprice",
         width = 1000,
-        height = 400) %>%
+        height = 400) |>
   layout(xaxis = list(title = "Lag (Months)"),
          yaxis = list(title = "Cross-Correlation"),
          shapes = list(
@@ -629,21 +631,13 @@ plot_ly(ccfDF_ipp_rprice,
 #|label: ccf2
 
 
-ccf_ipp_fprice <- ccf(pricedata_comb$ipp,pricedata_comb$farmgate,plot = F,lag.max = 12)
-
-
-ccfDF_ipp_fprice <- data.frame(
-  Lag = ccf_ipp_fprice$lag,
-  Correlation = ccf_ipp_fprice$acf
-)
-
-plot_ly(ccfDF_ipp_fprice, 
+plot_ly(ccf_dfs$ipp$fprice, 
         x = ~Lag, 
         y = ~Correlation, 
         type = "bar", 
         name = "CCF_ipp_fprice",
         width = 1000,
-        height = 400) %>%
+        height = 400)  |> 
   layout(xaxis = list(title = "Lag (Months)"),
          yaxis = list(title = "Cross-Correlation"),
          shapes = list(
@@ -662,21 +656,15 @@ plot_ly(ccfDF_ipp_fprice,
 #|label: ccf3
 
 
-ccf_rprice_fprice <- ccf(pricedata_comb$rprice,pricedata_comb$farmgate,plot = F,lag.max = 12)
 
 
-ccfDF_rprice_fprice <- data.frame(
-  Lag = ccf_rprice_fprice$lag,
-  Correlation = ccf_rprice_fprice$acf
-)
-
-plot_ly(ccfDF_rprice_fprice, 
+plot_ly(ccf_dfs$rprice$fprice, 
         x = ~Lag, 
         y = ~Correlation, 
         type = "bar", 
         name = "CCF_rprice_fprice",
         width = 1000,
-        height = 400) %>%
+        height = 400) |>
   layout(xaxis = list(title = "Lag (Months)"),
          yaxis = list(title = "Cross-Correlation"),
          shapes = list(
@@ -746,6 +734,78 @@ digraph {
 ```
 :::
 :::
+
+## Other macro-economic factors affecting domestic prices {.tiny-text auto-animate="true"}
+
+:::: {.r-stack}
+
+::: {.fragment fragment-index=1}
+
+### Import Volume  ↔  Local Retail price
+
+The CCF indicates a two-way relationship between imports and retail prices. Notably, import volumes show moderate positive correlations at lags 0 to +2, suggesting that changes in imports tend to coincide with, or lead to, shifts in local retail prices within the same month or within the next 1–2 months.
+
+```{r}
+#| label: ccf_imports
+#| echo: false
+
+plot_ly(ccf_dfs$Imports$rprice, 
+        x = ~Lag, 
+        y = ~Correlation, 
+        type = "bar", 
+        name = "CCF: Imports on Retail",
+        width = 1000,
+        height = 400) |>
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
+         ))
+
+```
+
+:::
+
+::: {.fragment fragment-index=2}
+### Granger Imports
+:::
+
+::: {.fragment fragment-index=3}
+
+### Stocks  ↔  Local farmgate price
+
+```{r}
+#| label: ccf_imports
+#| echo: false
+
+plot_ly(ccf_dfs$NFA$rprice, 
+        x = ~Lag, 
+        y = ~Correlation, 
+        type = "bar", 
+        name = "CCF: Imports on Retail",
+        width = 1000,
+        height = 400) |>
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
+         ))
+
+```
+
+:::
+
+
+::::
+
+
+
 
 ## Effect on Rice Inflation {.tiny-text auto-animate="true"}
 
@@ -1010,7 +1070,7 @@ With the continued decline in global rice prices throughout 2025, domestic retai
 #| label: retail_yoy
 #| echo: false
 
-plot_ly(width="1000",height="500") %>%
+plot_ly(width="1000",height="500") |>
         add_bars(data = pricedata_yoy,
             x=~date,
             y=~rprice_yoy,
@@ -1131,7 +1191,7 @@ Since we have established that retail prices influence and lead farmgate prices,
 
 ```{r}
 
-plot_ly(width="1000",height="500") %>%
+plot_ly(width="1000",height="500") |>
         add_bars(data = pricedata_yoy,
             x=~date,
             y=~farmgate_yoy ,
@@ -1249,7 +1309,7 @@ A sharper increasing trend for YoY % decline in farmgate prices than retail sugg
 
 ```{r}
 
-plot_ly(width="1000",height="500") %>%
+plot_ly(width="1000",height="500") |>
         add_lines(data = pricedata_yoy,
             x=~date,
             y=~farmgate_yoy ,
