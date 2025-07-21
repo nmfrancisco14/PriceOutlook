@@ -2202,40 +2202,48 @@ base_plot |>
 
 
 
+
+
 ## Key Takeaways {.tiny-text auto-animate=true}
 
 :::{.tiny-text}
 
-- **Global & Local Price Trends**  
-– All price series (global IPP, wholesale, retail, farmgate) have been on a **gradual downward trajectory** since mid‑2024, with local markets responding within 2–4 months of global shifts.
+#### Global & Local Price Trends
 
-- **Year‑on‑Year Declines**  
-– **Retail prices**: June 2025 are **17% lower** than June 2024.  
-– **Farmgate prices**: June 2025 are **31% lower**, indicating **farmers absorb most of the downturn** and signaling a widening farm‑retail margin.
+- All price series (global IPP, wholesale, retail, farmgate) have been on a **gradual downward trajectory** since mid‑2024, with local markets responding within 2–4 months of global shifts.
 
-- **Price Transmission Pathway**  
-– **Global → Retail**: Strong Granger causality at lag 2 $(p=0.022)$ and CCF peaks at lags 0–4.  
-– **Retail → Farmgate**: Significant Granger causality at lag 6 $(p =0.043)$ and CCF peaks at lags 0–2.  
-– **Global → Farmgate**: High CCF at lags 0–3 but **no direct Granger effect**, indicating **indirect transmission** via retail.
+#### Year‑on‑Year Decline  
 
+- **Retail prices**: June 2025 are **17% lower** than June 2024.  
+- **Farmgate prices**: June 2025 are **31% lower**, indicating **farmers absorb most of the downturn** and signaling a widening farm‑retail margin.
 
+#### Price Transmission Pathway
 
+- **Global → Retail**: Strong Granger causality at lag 2 $(p = 0.022)$ and CCF peaks at lags 0–4.  
+- **Retail → Farmgate**: Significant Granger causality at lag 6 $(p = 0.043)$ and CCF peaks at lags 0–2.  
+- **Global → Farmgate**: High CCF at lags 0–3 but **no direct Granger effect**, indicating **indirect transmission** via retail.
 
-- **Import Dynamics**  
-– Despite falling prices, **import volumes remain volatile**, with spikes in April and June 2025—suggesting policy shifts, opportunistic buying, or logistical factors outweigh pure price incentives.
-- CCF indicates that it is actually the **domestic retail prices that leads import volume (0-3 months)**. After peak, the effect on import volume persists for up to 4 months.
-- Granger causality test confirms this relationship suggesting that **domestic retail prices Granger-cause import volumes with significant effect from lags 2-12**. This means domestic retail prices as far as 12 months ago has influence on current import volumes.
+#### Import Dynamics
 
-- **Stock Adjustments**  
-– **Commercial & Household Stocks** have eased as traders and consumers release stocks in a falling‑price environment.  
-- **Rising prices may prompt traders to accumulate stocks** in anticipation of continued gains, whereas falling prices may lead them to offload inventory. 
-- **Households respond to market signals**: when prices rise or are expected to rise, households are more likely to purchase in larger quantities, taking advantage of lower costs to build up their stocks in anticipation of future price increases.
-– **Formal causality testing** reinforces that price changes drive stock adjustments.
+- Despite falling prices, **import volumes remain volatile**, with spikes in April and June 2025—suggesting policy shifts, opportunistic buying, or logistical factors outweigh pure price incentives.
+- CCF indicates that it is actually the **domestic retail prices that lead import volume (0–3 months)**. After peak, the effect on import volume persists for up to 4 months.
+- Granger causality test confirms this relationship, suggesting that **domestic retail prices Granger-cause import volumes with significant effect from lags 2–12**. This means domestic retail prices as far as 12 months ago have influence on current import volumes.
 
-- **Inflation Impact**  
-– Persistent price declines have driven **negative rice inflation** in 2025, helping to **cool headline CPI** given rice’s large weight in the food basket.
+#### Stock Adjustments
+
+- **Commercial & Household Stocks** have eased as traders and consumers release stocks in a falling‑price environment.  
+- **Rising prices may prompt traders to accumulate stocks** in anticipation of continued gains, whereas falling prices may lead them to offload inventory.  
+- **Households respond to market signals**: when prices rise or are expected to rise, households are more likely to purchase in larger quantities, taking advantage of lower costs to build up their stocks in anticipation of future price increases.  
+- **Formal causality testing** reinforces that price changes drive stock adjustments.
+
+#### Impact on Inflation
+
+- Persistent price declines have driven **negative rice inflation** in 2025, helping to **cool headline CPI** given rice’s large weight in the food basket.
 
 :::
+
+
+
 
 ## 
 
