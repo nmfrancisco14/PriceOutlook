@@ -630,6 +630,313 @@ lag_plot |>
 :::
 ::::
 
+
+
+## Year-on-Year comparison (2024v2025) {.tiny-text auto-animate="true"}
+
+
+:::: {.r-stack}
+
+::: {.fragment .fade-in-then-out fragment-index=1 .tiny-text}
+**Year-on-Year Retail Price change**
+
+With the continued decline in global rice prices throughout 2025, domestic retail prices have become significantly lower compared to the same months in 2024. This is reflected in the growing year-on-year (YoY) decline observed from January to June. The drop in international prices reduces import costs, intensifies market competition, and exerts downward pressure on local retail prices. As traders and importers adjust to these lower global benchmarks, the price reductions are gradually passed on to consumers, further accelerating the YoY decline in domestic retail prices.
+
+**As of June 2025, the average domestic retail price is 17% lower than in June 2024**
+
+
+
+```{r}
+#| label: retail_yoy
+#| echo: false
+
+plot_ly(width="1000",height="500") |>
+  add_bars(data = pricedata_yoy,
+           x=~date,
+           y=~rprice_yoy,
+           yaxis = "y",
+           name = "Retail Price Year on Year (YOY) Decline",
+           marker = list(
+             color = "#fbbb18",
+             line = list(color = "brown", width = 1.5)
+           ),
+           legendgroup = "domestic prices",
+           hovertemplate = paste0(
+             "%{fullData.name} : ",
+             "%{y:,.2f} %<extra></extra>"
+           )
+  ) |> 
+  add_lines(data =data_edited[["wholesale_prices"]] |> 
+              filter(type =="rmr"),
+            x = ~date,
+            y = ~price, yaxis="y2",
+            legendgroup = "domestic prices",
+            name = "Wholesale Price (RMR)",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"),
+            line = list(color = "darkorange")
+  ) |> 
+  add_lines(data =data_edited[["retail_prices"]] |> 
+              filter(type =="rmr"),
+            x = ~date,
+            y = ~price, yaxis="y2",
+            legendgroup = "domestic prices",
+            name = "Retail Price (RMR)",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"),
+            line = list(color = "darkgreen")
+  ) |> 
+  add_lines(data =  data_edited[["farmgate_prices"]],
+            x = ~date, yaxis="y2",
+            legendgroup = "domestic prices",
+            y = ~farmgate_rice,
+            name = "Farmgate price (rice equivalent)",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"),
+            line = list(color = "blue")) |> 
+  add_lines(data =data_edited[["ipp_ave"]],
+            x=~date,
+            y=~price, yaxis="y2",
+            legendgroup = "global prices",
+            name = "Average Import parity Price (IPP) across major importing countries",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "black", dash = "dash")) |>
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Vietnam 25%"),
+            x=~date,
+            y=~ipp, yaxis="y2",
+            legendgroup = "global prices",
+            name = ~paste(type," IPP"),
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "#FF3F3F", dash = "dash")) |>
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Thai 25%"),
+            x=~date,
+            y=~ipp, yaxis="y2",
+            legendgroup = "global prices",
+            name = ~paste(type," IPP"),
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "#65DA65", dash = "dash")) |>
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Pakistan 25%"),
+            x=~date,
+            y=~ipp, yaxis="y2",
+            legendgroup = "global prices",
+            name = ~paste(type," IPP"),
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "#EE82EE", dash = "dash")) |>
+  layout(hovermode='x unified',
+         xaxis = list(title = "Date",visible = T , showgrid=T,
+                      range = c("2024-12-15", "2025-06-15")),
+         yaxis2 = list(title = "Rice Price (₱/kg)",
+                       overlaying = "y",
+                       side = "left", 
+                       visible =T , 
+                       titlefont = list(size = 14),
+                       tickfont = list(size = 12),
+                       automargin = TRUE,
+                       showgrid=T),
+         yaxis = list(title = "% Decline ",
+                      range = c(0, 20),
+                      side = "right", 
+                      showgrid = F),
+         legend = list(
+           x=0,
+           y=-0.5,
+           xanchor='left',
+           yanchor='top',
+           orientation = 'h'
+         ),
+         
+         showlegend = T) |> 
+  rangeslider()
+
+
+```
+:::
+
+
+::: {.fragment .fade-in-then-out fragment-index=2 .tiny-text}
+
+**Year-on-Year Farmgate Price change**
+
+A similar pattern is observed for farmgate prices—showing an increasing trend in year-on-year (YoY) percentage decline as retail prices continue to fall. 
+
+**As of June 2025, the average domestic farmgate price is 31% lower than in June 2024**
+
+
+```{r}
+#| label: farmgate_YoY
+#| echo: false
+
+plot_ly(width="1000",height="500") |>
+  add_bars(data = pricedata_yoy,
+           x=~date,
+           y=~farmgate_yoy ,
+           yaxis = "y",
+           name = "Farmgate Price Year on Year (YOY) Decline",
+           marker = list(
+             color = "#fbbb18",
+             line = list(color = "brown", width = 1.5)
+           ),
+           legendgroup = "domestic prices",
+           hovertemplate = paste0(
+             "%{fullData.name} : ",
+             "%{y:,.2f} %<extra></extra>"
+           )
+  ) |> 
+  add_lines(data =data_edited[["wholesale_prices"]] |> 
+              filter(type =="rmr"),
+            x = ~date,
+            y = ~price, yaxis="y2",
+            legendgroup = "domestic prices",
+            name = "Wholesale Price (RMR)",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"),
+            line = list(color = "darkorange")
+  ) |> 
+  add_lines(data =data_edited[["retail_prices"]] |> 
+              filter(type =="rmr"),
+            x = ~date,
+            y = ~price, yaxis="y2",
+            legendgroup = "domestic prices",
+            name = "Retail Price (RMR)",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"),
+            line = list(color = "darkgreen")
+  ) |> 
+  add_lines(data =  data_edited[["farmgate_prices"]],
+            x = ~date, yaxis="y2",
+            legendgroup = "domestic prices",
+            y = ~farmgate_rice,
+            name = "Farmgate price (rice equivalent)",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"),
+            line = list(color = "blue")) |> 
+  add_lines(data =data_edited[["ipp_ave"]],
+            x=~date,
+            y=~price, yaxis="y2",
+            legendgroup = "global prices",
+            name = "Average Import parity Price (IPP) across major importing countries",
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "black", dash = "dash")) |>
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Vietnam 25%"),
+            x=~date,
+            y=~ipp, yaxis="y2",
+            legendgroup = "global prices",
+            name = ~paste(type," IPP"),
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "#FF3F3F", dash = "dash")) |>
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Thai 25%"),
+            x=~date,
+            y=~ipp, yaxis="y2",
+            legendgroup = "global prices",
+            name = ~paste(type," IPP"),
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "#65DA65", dash = "dash")) |>
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Pakistan 25%"),
+            x=~date,
+            y=~ipp, yaxis="y2",
+            legendgroup = "global prices",
+            name = ~paste(type," IPP"),
+            hovertemplate = paste0("%{fullData.name}: ",
+                                   "₱ %{y:.2f}<extra></extra>"), 
+            line = list(color = "#EE82EE", dash = "dash")) |>
+  layout(hovermode='x unified',
+         xaxis = list(title = "Date",visible = T , showgrid=T,
+                      range = c("2024-12-15", "2025-06-15")),
+         yaxis2 = list(title = "Rice Price (₱/kg)",
+                       overlaying = "y",
+                       side = "left", 
+                       visible =T , 
+                       titlefont = list(size = 14),
+                       tickfont = list(size = 12),
+                       automargin = TRUE,
+                       showgrid=T),
+         yaxis = list(title = "% Decline ",
+                      range = c(0, 35),
+                      side = "right", 
+                      showgrid = F),
+         legend = list(
+           x=0,
+           y=-0.5,
+           xanchor='left',
+           yanchor='top',
+           orientation = 'h'
+         ),
+         
+         showlegend = T) |> 
+  rangeslider()
+
+
+```
+
+:::
+
+::: {.fragment .fade-in-then-out fragment-index=3 .tiny-text}
+
+**Comparing Retail and Farmgate YoY**
+
+A sharper increasing trend for YoY % decline in farmgate prices than retail suggests farmers are absorbing more of the price drop, leading to reduced incomes and a widening gap between what consumers pay and what farmers earn.
+
+```{r}
+#| label: YOY_trends
+#| echo: false
+
+plot_ly(width="1000",height="500") |>
+  add_lines(data = pricedata_yoy,
+            x=~date,
+            y=~farmgate_yoy ,
+            name = "Farmgate Price Year on Year (YOY) Decline",
+            line = list(color = "darkorange"),
+            hovertemplate = paste0(
+              "%{fullData.name} : ",
+              "%{y:,.2f} %<extra></extra>"
+            )
+  ) |> 
+  add_lines(data = pricedata_yoy,
+            x=~date,
+            y=~rprice_yoy ,
+            name = "Retail Price Year on Year (YOY) Decline",
+            line = list(color = "darkgreen"),
+            hovertemplate = paste0(
+              "%{fullData.name} : ",
+              "%{y:,.2f} %<extra></extra>"
+            )
+  ) |> 
+  layout(hovermode='x unified',
+         xaxis = list(title = "Date",visible = T , showgrid=T,
+                      range = c("2024-12-15", "2025-06-15")),
+         yaxis = list(title = "% Decline ",
+                      # range = c(0, 20),
+                      side = "right", 
+                      showgrid = F),
+         legend = list(
+           x=0,
+           y=-0.5,
+           xanchor='left',
+           yanchor='top',
+           orientation = 'h'
+         ),
+         
+         showlegend = T) |> 
+  rangeslider()
+
+
+```
+:::
+::::
+
 ## Evidence of Price transmission {.tiny-text auto-animate="true"}
 
 ::::: r-stack
@@ -1894,311 +2201,6 @@ base_plot |>
 
 
 
-## Year-on-Year comparison (2024v2025) {.tiny-text auto-animate="true"}
-
-
-:::: {.r-stack}
-
-::: {.fragment .fade-in-then-out fragment-index=1 .extra-tiny-text}
-**Year-on-Year Retail Price change**
-
-With the continued decline in global rice prices throughout 2025, domestic retail prices have become significantly lower compared to the same months in 2024. This is reflected in the growing year-on-year (YoY) decline observed from January to June. The drop in international prices reduces import costs, intensifies market competition, and exerts downward pressure on local retail prices. As traders and importers adjust to these lower global benchmarks, the price reductions are gradually passed on to consumers, further accelerating the YoY decline in domestic retail prices.
-
-**As of June 2025, the average domestic retail price is 17% lower than in June 2024**
-
-
-
-```{r}
-#| label: retail_yoy
-#| echo: false
-
-plot_ly(width="1000",height="500") |>
-  add_bars(data = pricedata_yoy,
-           x=~date,
-           y=~rprice_yoy,
-           yaxis = "y",
-           name = "Retail Price Year on Year (YOY) Decline",
-           marker = list(
-             color = "#fbbb18",
-             line = list(color = "brown", width = 1.5)
-           ),
-           legendgroup = "domestic prices",
-           hovertemplate = paste0(
-             "%{fullData.name} : ",
-             "%{y:,.2f} %<extra></extra>"
-           )
-  ) |> 
-  add_lines(data =data_edited[["wholesale_prices"]] |> 
-              filter(type =="rmr"),
-            x = ~date,
-            y = ~price, yaxis="y2",
-            legendgroup = "domestic prices",
-            name = "Wholesale Price (RMR)",
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"),
-            line = list(color = "darkorange")
-  ) |> 
-  add_lines(data =data_edited[["retail_prices"]] |> 
-              filter(type =="rmr"),
-            x = ~date,
-            y = ~price, yaxis="y2",
-            legendgroup = "domestic prices",
-            name = "Retail Price (RMR)",
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"),
-            line = list(color = "darkgreen")
-  ) |> 
-  add_lines(data =  data_edited[["farmgate_prices"]],
-            x = ~date, yaxis="y2",
-            legendgroup = "domestic prices",
-            y = ~farmgate_rice,
-            name = "Farmgate price (rice equivalent)",
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"),
-            line = list(color = "blue")) |> 
-  add_lines(data =data_edited[["ipp_ave"]],
-            x=~date,
-            y=~price, yaxis="y2",
-            legendgroup = "global prices",
-            name = "Average Import parity Price (IPP) across major importing countries",
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"), 
-            line = list(color = "black", dash = "dash")) |>
-  add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Vietnam 25%"),
-            x=~date,
-            y=~ipp, yaxis="y2",
-            legendgroup = "global prices",
-            name = ~paste(type," IPP"),
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"), 
-            line = list(color = "#FF3F3F", dash = "dash")) |>
-  add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Thai 25%"),
-            x=~date,
-            y=~ipp, yaxis="y2",
-            legendgroup = "global prices",
-            name = ~paste(type," IPP"),
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"), 
-            line = list(color = "#65DA65", dash = "dash")) |>
-  add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Pakistan 25%"),
-            x=~date,
-            y=~ipp, yaxis="y2",
-            legendgroup = "global prices",
-            name = ~paste(type," IPP"),
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"), 
-            line = list(color = "#EE82EE", dash = "dash")) |>
-  layout(hovermode='x unified',
-         xaxis = list(title = "Date",visible = T , showgrid=T,
-                      range = c("2024-12-15", "2025-06-15")),
-         yaxis2 = list(title = "Rice Price (₱/kg)",
-                       overlaying = "y",
-                       side = "left", 
-                       visible =T , 
-                       titlefont = list(size = 14),
-                       tickfont = list(size = 12),
-                       automargin = TRUE,
-                       showgrid=T),
-         yaxis = list(title = "% Decline ",
-                      range = c(0, 20),
-                      side = "right", 
-                      showgrid = F),
-         legend = list(
-           x=0,
-           y=-0.5,
-           xanchor='left',
-           yanchor='top',
-           orientation = 'h'
-         ),
-         
-         showlegend = T) |> 
-  rangeslider()
-
-
-```
-:::
-
-
-::: {.fragment .fade-in-then-out fragment-index=2 .extra-tiny-text}
-
-**Year-on-Year Farmgate Price change**
-
-Since we have established that retail prices influence and lead farmgate prices, a similar pattern is expected for farmgate prices—showing an increasing trend in year-on-year (YoY) percentage decline as retail prices continue to fall. 
-
-**As of June 2025, the average domestic farmgate price is 31% lower than in June 2024**
-
-
-```{r}
-#| label: farmgate_YoY
-#| echo: false
-
-plot_ly(width="1000",height="500") |>
-  add_bars(data = pricedata_yoy,
-           x=~date,
-           y=~farmgate_yoy ,
-           yaxis = "y",
-           name = "Farmgate Price Year on Year (YOY) Decline",
-           marker = list(
-             color = "#fbbb18",
-             line = list(color = "brown", width = 1.5)
-           ),
-           legendgroup = "domestic prices",
-           hovertemplate = paste0(
-             "%{fullData.name} : ",
-             "%{y:,.2f} %<extra></extra>"
-           )
-  ) |> 
-  add_lines(data =data_edited[["wholesale_prices"]] |> 
-              filter(type =="rmr"),
-            x = ~date,
-            y = ~price, yaxis="y2",
-            legendgroup = "domestic prices",
-            name = "Wholesale Price (RMR)",
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"),
-            line = list(color = "darkorange")
-  ) |> 
-  add_lines(data =data_edited[["retail_prices"]] |> 
-              filter(type =="rmr"),
-            x = ~date,
-            y = ~price, yaxis="y2",
-            legendgroup = "domestic prices",
-            name = "Retail Price (RMR)",
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"),
-            line = list(color = "darkgreen")
-  ) |> 
-  add_lines(data =  data_edited[["farmgate_prices"]],
-            x = ~date, yaxis="y2",
-            legendgroup = "domestic prices",
-            y = ~farmgate_rice,
-            name = "Farmgate price (rice equivalent)",
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"),
-            line = list(color = "blue")) |> 
-  add_lines(data =data_edited[["ipp_ave"]],
-            x=~date,
-            y=~price, yaxis="y2",
-            legendgroup = "global prices",
-            name = "Average Import parity Price (IPP) across major importing countries",
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"), 
-            line = list(color = "black", dash = "dash")) |>
-  add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Vietnam 25%"),
-            x=~date,
-            y=~ipp, yaxis="y2",
-            legendgroup = "global prices",
-            name = ~paste(type," IPP"),
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"), 
-            line = list(color = "#FF3F3F", dash = "dash")) |>
-  add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Thai 25%"),
-            x=~date,
-            y=~ipp, yaxis="y2",
-            legendgroup = "global prices",
-            name = ~paste(type," IPP"),
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"), 
-            line = list(color = "#65DA65", dash = "dash")) |>
-  add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Pakistan 25%"),
-            x=~date,
-            y=~ipp, yaxis="y2",
-            legendgroup = "global prices",
-            name = ~paste(type," IPP"),
-            hovertemplate = paste0("%{fullData.name}: ",
-                                   "₱ %{y:.2f}<extra></extra>"), 
-            line = list(color = "#EE82EE", dash = "dash")) |>
-  layout(hovermode='x unified',
-         xaxis = list(title = "Date",visible = T , showgrid=T,
-                      range = c("2024-12-15", "2025-06-15")),
-         yaxis2 = list(title = "Rice Price (₱/kg)",
-                       overlaying = "y",
-                       side = "left", 
-                       visible =T , 
-                       titlefont = list(size = 14),
-                       tickfont = list(size = 12),
-                       automargin = TRUE,
-                       showgrid=T),
-         yaxis = list(title = "% Decline ",
-                      range = c(0, 35),
-                      side = "right", 
-                      showgrid = F),
-         legend = list(
-           x=0,
-           y=-0.5,
-           xanchor='left',
-           yanchor='top',
-           orientation = 'h'
-         ),
-         
-         showlegend = T) |> 
-  rangeslider()
-
-
-```
-
-:::
-
-::: {.fragment .fade-in-then-out fragment-index=3 .tiny-text}
-
-**Comparing Retail and Farmgate YoY**
-
-A sharper increasing trend for YoY % decline in farmgate prices than retail suggests farmers are absorbing more of the price drop, leading to reduced incomes and a widening gap between what consumers pay and what farmers earn.
-
-```{r}
-#| label: YOY_trends
-#| echo: false
-
-plot_ly(width="1000",height="500") |>
-  add_lines(data = pricedata_yoy,
-            x=~date,
-            y=~farmgate_yoy ,
-            name = "Farmgate Price Year on Year (YOY) Decline",
-            line = list(color = "darkorange"),
-            hovertemplate = paste0(
-              "%{fullData.name} : ",
-              "%{y:,.2f} %<extra></extra>"
-            )
-  ) |> 
-  add_lines(data = pricedata_yoy,
-            x=~date,
-            y=~rprice_yoy ,
-            name = "Retail Price Year on Year (YOY) Decline",
-            line = list(color = "darkgreen"),
-            hovertemplate = paste0(
-              "%{fullData.name} : ",
-              "%{y:,.2f} %<extra></extra>"
-            )
-  ) |> 
-  layout(hovermode='x unified',
-         xaxis = list(title = "Date",visible = T , showgrid=T,
-                      range = c("2024-12-15", "2025-06-15")),
-         yaxis = list(title = "% Decline ",
-                      # range = c(0, 20),
-                      side = "right", 
-                      showgrid = F),
-         legend = list(
-           x=0,
-           y=-0.5,
-           xanchor='left',
-           yanchor='top',
-           orientation = 'h'
-         ),
-         
-         showlegend = T) |> 
-  rangeslider()
-
-
-```
-:::
-::::
-
 
 ## Key Takeaways {.tiny-text auto-animate=true}
 
@@ -2207,24 +2209,32 @@ plot_ly(width="1000",height="500") |>
 - **Global & Local Price Trends**  
 – All price series (global IPP, wholesale, retail, farmgate) have been on a **gradual downward trajectory** since mid‑2024, with local markets responding within 2–4 months of global shifts.
 
+- **Year‑on‑Year Declines**  
+– **Retail prices**: June 2025 are **17% lower** than June 2024.  
+– **Farmgate prices**: June 2025 are **31% lower**, indicating **farmers absorb most of the downturn** and signaling a widening farm‑retail margin.
+
 - **Price Transmission Pathway**  
 – **Global → Retail**: Strong Granger causality at lag 2 $(p=0.022)$ and CCF peaks at lags 0–4.  
 – **Retail → Farmgate**: Significant Granger causality at lag 6 $(p =0.043)$ and CCF peaks at lags 0–2.  
 – **Global → Farmgate**: High CCF at lags 0–3 but **no direct Granger effect**, indicating **indirect transmission** via retail.
 
-- **Inflation Impact**  
-– Persistent price declines have driven **negative rice inflation** in 2025, helping to **cool headline CPI** given rice’s large weight in the food basket.
+
+
 
 - **Import Dynamics**  
 – Despite falling prices, **import volumes remain volatile**, with spikes in April and June 2025—suggesting policy shifts, opportunistic buying, or logistical factors outweigh pure price incentives.
+- CCF indicates that it is actually the **domestic retail prices that leads import volume (0-3 months)**. After peak, the effect on import volume persists for up to 4 months.
+- Granger causality test confirms this relationship suggesting that **domestic retail prices Granger-cause import volumes with significant effect from lags 2-12**. This means domestic retail prices as far as 12 months ago has influence on current import volumes.
 
 - **Stock Adjustments**  
 – **Commercial & Household Stocks** have eased as traders and consumers release stocks in a falling‑price environment.  
-– **Government/NFA Stocks** have been rebuilt at lower cost, stabilizing overall reserve levels.
+- **Rising prices may prompt traders to accumulate stocks** in anticipation of continued gains, whereas falling prices may lead them to offload inventory. 
+- **Households respond to market signals**: when prices rise or are expected to rise, households are more likely to purchase in larger quantities, taking advantage of lower costs to build up their stocks in anticipation of future price increases.
+– **Formal causality testing** reinforces that price changes drive stock adjustments.
 
-- **Year‑on‑Year Declines**  
-– **Retail prices**: June 2025 are **17% lower** than June 2024.  
-– **Farmgate prices**: June 2025 are **31% lower**, indicating **farmers absorb most of the downturn** and signaling a widening farm‑retail margin.
+- **Inflation Impact**  
+– Persistent price declines have driven **negative rice inflation** in 2025, helping to **cool headline CPI** given rice’s large weight in the food basket.
+
 :::
 
 ## 
