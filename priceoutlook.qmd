@@ -102,7 +102,7 @@ mostrecentdate_api <- lapply(data, function(x) x |>
                                slice_max(order_by = id) |> 
                                pull(monthyr) |> 
                                as.Date("%m/%d/%Y")
-  )
+)
 mostrecentdate_api_flagged <- lapply(mostrecentdate_api,flag_if_late)
 data_external <- list()
 
@@ -141,27 +141,27 @@ data_external[["stocks"]] <- readRDS("external_data/stocks.rds")
 data_external[["imports"]] <- readRDS("external_data/imports.rds")
 
 update_msg <- 
-paste("Most recent DATA as of: ", Sys.Date(),
-          "\nFROM DATA LAKE APIs",
-          "\n--1. PSA Wholesale Prices: ", mostrecentdate_api_flagged$wholesale_prices,
-          "\n--2. PSA Retail Prices: ", mostrecentdate_api_flagged$retail_prices,
-          "\n--3. FAO FOB prices: ", mostrecentdate_api_flagged$fao_fob_prices,
-          "\n--4. VFA FOB prices: ", mostrecentdate_api_flagged$vfa_fob_prices,
-          "\n--5. BSP Exchnge rates: ", mostrecentdate_api_flagged$exrates,
-          "\n--6. PSA Farmgate Prices: ", mostrecentdate_api_flagged$farmgate_prices,
-          "\n\n",
-          "FROM app local files",
-      "\n--1. PSA rice total stocks: ", flag_if_late(data_external[["stocks"]] |> 
-                                                       filter(Stock=="Total") |> na.omit() |> slice_max(order_by = date) |> pull(date)),
-      "\n--2. PSA rice inflation: ",
-      flag_if_late(data_external[["riceinf"]] |>
-                     slice_max(order_by = date) |> pull(date)),
-      "\n--3. PSA/BOC Imports: ",
-      flag_if_late(data_external[["imports"]] |>
-                     slice_max(order_by = date) |> pull(date)),
-      
-      "\n\n* Each asterisk (*) indicates the data is late by one month."
-      
+  paste("Most recent DATA as of: ", Sys.Date(),
+        "\nFROM DATA LAKE APIs",
+        "\n--1. PSA Wholesale Prices: ", mostrecentdate_api_flagged$wholesale_prices,
+        "\n--2. PSA Retail Prices: ", mostrecentdate_api_flagged$retail_prices,
+        "\n--3. FAO FOB prices: ", mostrecentdate_api_flagged$fao_fob_prices,
+        "\n--4. VFA FOB prices: ", mostrecentdate_api_flagged$vfa_fob_prices,
+        "\n--5. BSP Exchnge rates: ", mostrecentdate_api_flagged$exrates,
+        "\n--6. PSA Farmgate Prices: ", mostrecentdate_api_flagged$farmgate_prices,
+        "\n\n",
+        "FROM app local files",
+        "\n--1. PSA rice total stocks: ", flag_if_late(data_external[["stocks"]] |> 
+                                                         filter(Stock=="Total") |> na.omit() |> slice_max(order_by = date) |> pull(date)),
+        "\n--2. PSA rice inflation: ",
+        flag_if_late(data_external[["riceinf"]] |>
+                       slice_max(order_by = date) |> pull(date)),
+        "\n--3. PSA/BOC Imports: ",
+        flag_if_late(data_external[["imports"]] |>
+                       slice_max(order_by = date) |> pull(date)),
+        
+        "\n\n* Each asterisk (*) indicates the data is late by one month."
+        
   )
 
 message(update_msg)
@@ -186,7 +186,7 @@ ipp_ton <- ((cif * exchange_rate) + tariff_amount + local_transpo)
 ipp_ton / 1000
 
 }
-  
+
 
 data_edited <- list()
 
@@ -207,7 +207,7 @@ data_edited[["retail_prices"]] <-
   relocate(date,.before=1) |> 
   pivot_longer(c(wmr,rmr), names_to = 'type',values_to = 'price') |> 
   arrange(date, type)
-  
+
 data_edited[["farmgate_prices"]] <- 
   data$farmgate_prices |> 
   mutate(date = mdy(monthyr),
@@ -233,21 +233,21 @@ data_edited[["ipp"]] <-
   mutate(date =mdy(monthyr),
          price = as.numeric(value),
          exrates = as.numeric(exrates)) |> 
-    select(-c(monthyr,value,created_at,updated_at)) |> 
+  select(-c(monthyr,value,created_at,updated_at)) |> 
   relocate(date,.before=1) |>
   mutate(ipp = pmap_dbl(list(price,exrates),
                         function(price,exrates)
                           calculate_ipp(fob = price, exchange_rate = exrates)
   )
   )
-  
+
 data_edited[["ipp_ave"]] <- 
   data_edited[["ipp"]] |>
   reframe(price = mean(ipp,na.rm=TRUE), .by = date)
 
 
 pricedata_comb <-
-data_edited$ipp_ave |> 
+  data_edited$ipp_ave |> 
   rename(ipp=price) |> 
   left_join(data_edited$retail_prices |> filter(type=="rmr") |> select(date,rprice=price)) |> 
   
@@ -263,19 +263,19 @@ data_edited$ipp_ave |>
                           values_from=Inventory))
 
 pricedata_yoy <- 
-pricedata_comb |> 
+  pricedata_comb |> 
   arrange(date) |> 
   mutate(
     across(.cols =ipp:pak_price, 
            .fns = ~ ((. / lag(., 12)) - 1)*-100, #transform to negative
            .names = "{.col}_yoy")
   )
-  # filter(date>=ymd("2025-01-01"))
+# filter(date>=ymd("2025-01-01"))
 
 
 
 base_plot <- 
-plot_ly(width="1000",height="500") |>
+  plot_ly(width="1000",height="500") |>
   add_lines(data =data_edited[["wholesale_prices"]] |> 
               filter(type =="rmr"),
             x = ~date,
@@ -312,8 +312,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "black", dash = "dash")) |>
-    add_lines(data =data_edited[["ipp"]] |> 
-                filter(type == "Vietnam 25%"),
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Vietnam 25%"),
             x=~date,
             y=~ipp,
             legendgroup = "global prices",
@@ -321,8 +321,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#FF3F3F", dash = "dash")) |>
-      add_lines(data =data_edited[["ipp"]] |> 
-                filter(type == "Thai 25%"),
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Thai 25%"),
             x=~date,
             y=~ipp,
             legendgroup = "global prices",
@@ -330,8 +330,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#65DA65", dash = "dash")) |>
-      add_lines(data =data_edited[["ipp"]] |> 
-                filter(type == "Pakistan 25%"),
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Pakistan 25%"),
             x=~date,
             y=~ipp,
             legendgroup = "global prices",
@@ -339,7 +339,7 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#EE82EE", dash = "dash")) |>
-layout(hovermode='x unified',
+  layout(hovermode='x unified',
          xaxis = list(title = "Date",visible = T , showgrid=T),
          yaxis = list(title = "Rice Price (₱/kg)",visible =T , showgrid=T),
          yaxis2 = list(
@@ -353,14 +353,14 @@ layout(hovermode='x unified',
            automargin = T,
            showgrid=T
          ),
-       legend = list(
-         x=0,
-         y=-0.5,
-         xanchor='left',
-         yanchor='top',
-         orientation = 'h'
-       ),
-       
+         legend = list(
+           x=0,
+           y=-0.5,
+           xanchor='left',
+           yanchor='top',
+           orientation = 'h'
+         ),
+         
          showlegend = T) |> 
   rangeslider()
 
@@ -368,6 +368,7 @@ layout(hovermode='x unified',
 ipp_spikes <- ymd(c("2023-08-01","2024-01-01","2024-06-01","2024-12-01"))
 
 ```
+
 ```{r}
 #| label: ccfresults
 #| echo: false
@@ -379,7 +380,24 @@ ccf_results <- map(vars, ~ list(
   fprice  = ccf(pricedata_comb[[.x]], pricedata_comb$farmgate, plot = FALSE, lag.max = 12)
 ))
 
+
 names(ccf_results) <- vars
+
+#special
+ccf_results$rprice$Imports <-  ccf(pricedata_comb$rprice, pricedata_comb$Imports, plot = FALSE, lag.max = 12)
+
+ccf_results$rprice$Commercial <-  ccf(pricedata_comb$rprice, pricedata_comb$Commercial, plot = FALSE, lag.max = 12)
+
+ccf_results$rprice$Household <-  ccf(pricedata_comb$rprice, pricedata_comb$Household, plot = FALSE, lag.max = 12)
+
+ccf_results$rprice$NFA <-  ccf(pricedata_comb$rprice, pricedata_comb$NFA, plot = FALSE, lag.max = 12)
+
+ccf_results$rprice$Total <-  ccf(pricedata_comb$rprice, pricedata_comb$Total, plot = FALSE, lag.max = 12)
+
+ccf_results$ipp$Imports <-  ccf(pricedata_comb$ipp, pricedata_comb$Imports, plot = FALSE, lag.max = 12)
+
+
+
 
 
 ccf_dfs <- map(ccf_results, ~ list(
@@ -393,37 +411,99 @@ ccf_dfs <- map(ccf_results, ~ list(
   )
 ))
 
+#special
+ccf_dfs$rprice$Imports <- data.frame(Lag = ccf_results$rprice$Imports$lag,
+                                     Correlation = ccf_results$rprice$Imports$acf)
+
+ccf_dfs$rprice$Commercial <- data.frame(Lag = ccf_results$rprice$Commercial$lag,
+                                     Correlation = ccf_results$rprice$Commercial$acf)
+
+ccf_dfs$rprice$Household <- data.frame(Lag = ccf_results$rprice$Household$lag,
+                                     Correlation = ccf_results$rprice$Household$acf)
+
+ccf_dfs$rprice$NFA <- data.frame(Lag = ccf_results$rprice$NFA$lag,
+                                     Correlation = ccf_results$rprice$NFA$acf)
+
+ccf_dfs$rprice$Total <- data.frame(Lag = ccf_results$rprice$Total$lag,
+                                     Correlation = ccf_results$rprice$Total$acf)
+
+ccf_dfs$ipp$Imports <- data.frame(Lag = ccf_results$ipp$Imports$lag,
+                                     Correlation = ccf_results$ipp$Imports$acf)
+
 ```
 
+``` {r}
+#| label: granger_res
+#| echo: false
+
+
+# vars <- setdiff(names(pricedata_comb), c("date", "farmgate"))
+
+vars <- setdiff(names(pricedata_comb), c("date", "farmgate"))
+
+
+
+granger_results <- expand_grid(
+  variable = vars,
+  target = c("rprice", "farmgate", "Imports"),
+  lag = 2:12
+) |> 
+  filter(!(variable==target)) |> 
+  
+  mutate(
+    result = pmap(list(variable, target, lag), function(var, tgt, l) {
+      formula <- as.formula(paste(tgt, "~", var))
+      
+      grangertest(formula, order = l, data = pricedata_comb)
+    })
+  ) |> 
+  # Remove NULLs (errors or failed models)
+  filter(!map_lgl(result, is.null)) |>
+  # Tidy and extract p-values
+  mutate(tidy_result = map(result, broom::tidy)) |>
+  unnest(tidy_result) |>
+  mutate(p.adj = p.adjust(p.value, method = "BH")) |> 
+  select(variable, target, lag,term, statistic, p.value, p.adj) |> 
+  filter(!is.na(p.value))
+
+
+granger_maXsig <- 
+  granger_results |> 
+  filter(p.value < 0.05) |>
+  arrange(variable,target,lag) |> 
+  group_by(variable,target) |> 
+  slice_max(order_by=lag)
+```
 
 ## Global and Local Price Trends {.tiny-text auto-animate="true"}
 
-::: r-stack
-::: {.fragment fragment-index="1"}
+::::: r-stack
+:::: {.fragment fragment-index="1"}
 ::: {.fragment .fade-out fragment-index="2"}
 Historical trends (2016-2025) of local rice prices (farmgate, retail and wholesale) and global import parity prices.
 :::
-:::
+::::
 
-::: {.fragment .fade-in fragment-index="2"}
+:::: {.fragment .fade-in fragment-index="2"}
 ::: {.fragment .fade-out fragment-index="4"}
 Global and local rice price trends are **synchronized with delayed responses**
 :::
-:::
+::::
 
 ::: {.fragment .fade-in fragment-index="4"}
 Global price transmission visually noticeable for **two months after the spike**.
 :::
-:::
+:::::
 
-::: r-stack
+:::: r-stack
 ::: {.fragment fragment-index="1"}
 ```{r}
 #| label: pricetrends
 #| data-id: plot
 
 
-base_plot
+base_plot |> 
+  plotly::config(displayModeBar = FALSE)
 
 ```
 :::
@@ -434,7 +514,8 @@ base_plot
 #| data-id: plot
 
 base_plot |> 
-  layout(xaxis=list(range = c("2023-06-01", "2025-06-01")))
+  layout(xaxis=list(range = c("2023-06-01", "2025-06-01"))) |> 
+  plotly::config(displayModeBar = FALSE)
 
 ```
 :::
@@ -446,9 +527,9 @@ base_plot |>
 
 
 spike_plot <- 
-base_plot |> 
-    layout(
-      xaxis=list(range = c("2023-06-01", "2025-06-01")),
+  base_plot |> 
+  layout(
+    xaxis=list(range = c("2023-06-01", "2025-06-01")),
     shapes = c(
       # 1) vertical dashed lines
       lapply(ipp_spikes, function(d) list(
@@ -472,7 +553,8 @@ base_plot |>
     )
   )
 
-spike_plot
+spike_plot |> 
+  plotly::config(displayModeBar = FALSE)
 
 ```
 :::
@@ -482,7 +564,7 @@ spike_plot
 #| label: withdelayedresponse
 #| data-id: plot
 
- lag_plot <- 
+lag_plot <- 
   base_plot |> 
   layout(
     xaxis=list(range = c("2023-06-01", "2025-06-01")),
@@ -541,69 +623,109 @@ spike_plot
     )
   )
 
-lag_plot
+lag_plot |> 
+  plotly::config(displayModeBar = FALSE)
 
 ```
 :::
-:::
+::::
 
 ## Evidence of Price transmission {.tiny-text auto-animate="true"}
 
-::: r-stack
-::: {.fragment fragment-index="1"}
+::::: r-stack
+
 ::: {.fragment .fade-out fragment-index="2"}
-Using Cross-Correlation function (CCF) to detect time lag effects of global rice prices or delayed response of local rice prices
-:::
+
+### Cross Correlation Function (CCF) and Granger Causality test 
+
+To assess whether global rice prices impact domesteic retail and farmgate prices, we apply the **Cross-Correlation Function (CCF)** to explore lead-lag relationships, and the **Granger Causality Test** to determine predictive causality. Together, these tools help uncover potential price transmission pathways across markets.
+
 :::
 
-::: {.fragment .fade-in-then-out .tiny-text fragment-index="2"}
+<!-- :::: {.fragment fragment-index="2" .tiny-text} -->
+
+:::: {.fragment .fade-in-then-out .extra-tiny-text fragment-index="2"}
 ### Average IPP price (Global) → Local Retail price
 
-CCF plot shows that the Average IPP prices significantly leads ( *affect* ) local rice retail price by up to **9 months**, with the strongest effect at lag **0 to +4**, and still meaningful influence up to lag **6--9**.
+The cross-correlation function shows that **global prices** lead doemstic retail prices by up to **4 months**, with correlations rising from lag -4 to a peak at lag 0 (0.762). The continued high correlations at positive lags (e.g., lag +1: 0.740, lag +2: 0.701) reflect the momentum and persistence of price trends — once retail prices begin adjusting to rising global import costs, they often continue moving in the same direction for several months. This suggests a gradual and sustained pass-through of international prices to domestic retail markets.
+::::
 
-No substantial correlation observed on negative lags, ruling out local retail prices driving global trends.
-:::
-
-::: {.fragment .fade-in-then-out .tiny-text fragment-index="3"}
+:::: {.fragment .fade-in fragment-index="3" .extra-tiny-text}
+:::: {.fragment .fade-out fragment-index=5}
 ### Average IPP price (Global) → Local Farmgate price
 
-CCF plot shows that the Average IPP prices significantly leads ( *indirectly affect* ) local farmgate price by up to **10 months**, with the strongest effect at lag **0 to +3**, and still meaningful influence up to lag **6** with fading impact from **8 - 10** months.
-
-No reason to believe that farmgate prices leads IPP prices, since it's economical implausible (Philippines being a price taker). Therefore, substantial correlation observed on negative lags can be ignored and might just be a result of shared long-term trend and/or spurious correlation.
+:::: {.r-stack}
+::: {.fragment .fade-out fragment-index=4}
+With a similar CCF pattern to IPP with retail prices, farmgate prices show a smoother and slower adjustment. Correlations become strongly positive starting from **lag -6** and peak at lag 0 (0.751), suggesting that current IPP has a strong  influence on farmgate prices and IPP leads farmgate prices by up to **6 months**. This relationship persists up to lag +6, implying that once farmgate prices begin responding to global import trends, they continue adjusting in the same direction for several months. The delayed but strong correlation reflects the pass-through of international price signals to the local farm level, although it is less immediate than for retail prices, possibly due to buffering by traders or policy interventions.
 :::
-
-::: {.fragment .fade-in-then-out .extra-tiny-text fragment-index="4"}
-### Local Retail price ↔ Local Farmgate price
-
-The CCF plot reveals a **two-way relationship** between local retail and farmgate rice prices, with both series responding rapidly to each other's changes.
-
-However, retail prices appear to lead farmgate prices more strongly, with the highest correlations observed at lag **0 to +2**, and a meaningful influence extending up to **6 months**.
-
-In contrast, farmgate prices show a weaker and shorter lead, potentially influencing retail prices by only up to **1 month**.
-
-This asymmetry, combined with the strong correlation between global prices (IPP) and retail prices, supports the conclusion that **global price movements primarily influence farmgate prices indirectly---through their immediate impact on retail markets**.
+::: {.fragment .fade-in-then-out fragment-index=4}
+Although the CCF shows that global import parity prices lead farmgate prices, the effect is likely indirect, occurring through price transmission from global to retail markets, and eventually to farmers through changes in traders' buying behavior.
 :::
+::::
 
-::: {.tiny-text .fragment .fade-in-then-out fragment-index="5"}
-Results from the Granger causality test provide sufficient evidence that global rice prices (as estimated by the average Import Parity Price or IPP) Granger-cause local retail prices, indicating that global price movements have a statistically significant influence on retail markets within a 2-month window.
+::::
+::::
 
-Similarly, local retail prices Granger-cause farmgate prices, with effects unfolding over a 6-month period, suggesting that price changes at the consumer level gradually influence prices received by farmers.
-:::
+:::: {.fragment .fade-in-then-out .tiny-text fragment-index="5"}
+### Local Retail price → Local Farmgate price
 
-::: {.tiny-text .fragment .fade-in-then-out fragment-index="6"}
+The CCF shows that **retail prices lead farmgate prices with strong correlations from 8 months before to the present**, peaking at lag 0. The effect persists up to 6 months after, reflecting a full-cycle price transmission from market to farm level. 
+
+A longer lead window indicates that farmgate prices respond slowly to retail price changes, often due to delays in information flow, supply chain frictions, or power asymmetries. This suggests inefficiencies in price transmission, which may disadvantage producers by delaying income adjustments in response to market trends.
+
+::::
+
+:::: {.tiny-text .fragment .fade-in-then-out fragment-index="6"}
+
+**Granger causality test**
+
+Results from the Granger causality test provide sufficient evidence that **global rice prices (as estimated by the average Import Parity Price or IPP) Granger-cause local retail prices**, indicating that global price movements have a statistically significant influence on retail markets within a 2-month window.
+
+Similarly, **local retail prices Granger-cause farmgate prices**, with effects unfolding over a 6-month period, suggesting that price changes at the consumer level gradually influence prices received by farmers.
+::::
+
+:::: {.tiny-text .fragment .fade-in-then-out fragment-index="7"}
+
+🟢 *Fast Upstream-to-Midstream Transmission*
+
+The quick 2-month lag from global to retail prices indicates that **domestic markets respond quickly to international trends.**
+
+This is expected in countries where retail markets are influenced by:
+
+- Import costs
+
+- Exchange rates
+
+- Policy-driven responses to global price movements
+::::
+
+:::: {.tiny-text .fragment .fade-in-then-out fragment-index="8"}
+🔴 *Slow Midstream-to-Downstream Transmission*
+
+
+The long 10-month lag from retail to farmgate prices suggests that:
+
+- Farmers are the last to feel the effect of price shifts
+
+- There may be market frictions, delayed bargaining, or lack of direct market access
+
+This delay could result in producers being disadvantaged, unable to react promptly to price opportunities or risks.
+::::
+
+:::: {.tiny-text .fragment .fade-in-then-out fragment-index="9"}
 In contrast, while the cross-correlation function (CCF) reveals a strong association between global and farmgate prices, the Granger causality test does not detect a direct predictive relationship.
 
-This divergence suggests that the observed correlation may result from indirect transmission, where global prices influence farmgate prices only through their effect on retail prices.
-:::
-:::
+This divergence suggests that the observed correlation may result from indirect transmission, where **global prices influence farmgate prices only through their effect on retail prices.**
+::::
 
-::: r-stack
-::: {.fragment fragment-index="1"}
+:::::
+
+::::: r-stack
+
+:::: {.fragment fragment-index="2"}
 ::: {.fragment .fade-out fragment-index="3"}
 ```{r}
 #|label: ccf1
-
-
 
 plot_ly(ccf_dfs$ipp$rprice, 
         x = ~Lag, 
@@ -615,18 +737,45 @@ plot_ly(ccf_dfs$ipp$rprice,
   layout(xaxis = list(title = "Lag (Months)"),
          yaxis = list(title = "Cross-Correlation"),
          shapes = list(
+           
+           #confidence bands
            list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
                 y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
            list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
-                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
-         ))
-
-
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           
+           #leads
+           list(type = "rect",
+                x0 = -4, x1 = 0,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+           
+           #lag momentums
+           
+           list(type = "rect",
+                x0 = 1, x1 = 5,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+           
+         ),
+         
+         annotations = list(
+           list(x = -2, y = 0.8, text = "Global Price Transmission<br>(Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 3, y = 0.8, text = "Local Price Response <br> (Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+         
+  ) |> 
+  plotly::config(displayModeBar = FALSE)
 ```
 :::
-:::
+::::
 
-::: {.fragment .fade-in-then-out fragment-index="3"}
+:::: {.fragment .fade-in fragment-index="3"}
+:::: {.fragment .fade-out fragment-index=5}
 ```{r}
 #|label: ccf2
 
@@ -641,19 +790,47 @@ plot_ly(ccf_dfs$ipp$fprice,
   layout(xaxis = list(title = "Lag (Months)"),
          yaxis = list(title = "Cross-Correlation"),
          shapes = list(
+           #confidence bands
            list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
                 y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
            list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
-                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
-         ))
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           
+           #leads
+           list(type = "rect",
+                x0 = -5, x1 = 0,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+           
+           #lag momentums
+           
+           list(type = "rect",
+                x0 = 1, x1 = 6,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+           
+         ),
+         
+         annotations = list(
+           list(x = -2.5, y = 0.8, text = "Global Price Transmission<br>(Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 3, y = 0.8, text = "Local Price Response <br> (Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+  ) |> 
+  plotly::config(displayModeBar = FALSE)
 
 
 ```
-:::
+::::
+::::
 
-::: {.fragment .fade-in-then-out fragment-index="4"}
+:::: {.fragment .fade-in-then-out fragment-index="5"}
 ```{r}
 #|label: ccf3
+#|echo: false
 
 
 
@@ -668,17 +845,44 @@ plot_ly(ccf_dfs$rprice$fprice,
   layout(xaxis = list(title = "Lag (Months)"),
          yaxis = list(title = "Cross-Correlation"),
          shapes = list(
+           #confidence bands
            list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
                 y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
            list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
-                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
-         ))
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           
+           #leads
+           list(type = "rect",
+                x0 = -8, x1 = 0,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+           
+           #lag momentums
+           
+           list(type = "rect",
+                x0 = 1, x1 = 6,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+           
+         ),
+         
+         annotations = list(
+           list(x = -4, y = 0.8, text = "Retail Price Transmission<br>(Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 3.5, y = 0.8, text = "Farmgate Price Response <br> (Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+         ) |> 
+  plotly::config(.displayModeBar = FALSE)
 
 
 ```
-:::
+::::
 
-::: {.fragment .fade-in-then-out fragment-index="5"}
+:::: {.fragment .fade-in .tiny-text fragment-index="6"}
+:::: {.fragment .fade-out fragment-index="9"}
 ```{r}
 #| label: granger1
 #| echo: false
@@ -695,15 +899,14 @@ granger2 <- grangertest(farmgate ~ ipp,
                         data = pricedata_comb)
 
 granger3 <- grangertest(farmgate ~ rprice, 
-                        order = 6, 
+                        order = 10, 
                         data = pricedata_comb)
 
-
 granger_summary <- tribble(
-  ~Relationship,              ~Lag_Order, ~F_Statistic, ~p_Value, ~Significant,
-  "Global (IPP) → Local Retail",               2,    round(granger1$`F`[2], 3),  round(granger1$`Pr(>F)`[2], 4), ifelse(granger1$`Pr(>F)`[2] < 0.05, "Yes", "No"),
-  "Global (IPP) → Local Farmgate",            2,    round(granger2$`F`[2], 3),  round(granger2$`Pr(>F)`[2], 4), ifelse(granger2$`Pr(>F)`[2] < 0.05, "Yes", "No"),
-  "Local Retail → Local Farmgate",            6,    round(granger3$`F`[2], 3),  round(granger3$`Pr(>F)`[2], 4), ifelse(granger3$`Pr(>F)`[2] < 0.05, "Yes", "No")
+  ~Relationship,              ~Lag_Order, ~F_Statistic, ~p_Value, ~Significant, ~Transmission,
+  "Global (IPP) → Local Retail",               2,    round(granger1$`F`[2], 3),  round(granger1$`Pr(>F)`[2], 4), ifelse(granger1$`Pr(>F)`[2] < 0.05, "Yes", "No"), "Fast",
+  "Global (IPP) → Local Farmgate",            2,    round(granger2$`F`[2], 3),  round(granger2$`Pr(>F)`[2], 4), ifelse(granger2$`Pr(>F)`[2] < 0.05, "Yes", "No"), "None",
+  "Local Retail → Local Farmgate",            10,    round(granger3$`F`[2], 3),  round(granger3$`Pr(>F)`[2], 4), ifelse(granger3$`Pr(>F)`[2] < 0.05, "Yes", "No"), "Slow"
 )
 
 kable(granger_summary, format = "markdown", 
@@ -711,98 +914,944 @@ kable(granger_summary, format = "markdown",
 
 
 ```
-:::
+::::
+::::
 
-::: {.fragment .fade-in-then-out fragment-index="6"}
+:::: {.fragment .fade-in-then-out fragment-index="9"}
 ```{dot}
-
+#| label: grViz
 digraph {
-  rankdir = LR
-  graph [fontname="Helvetica"]
-  node  [fontname="Helvetica", shape=box, style=filled, fillcolor=lightyellow]
-  edge  [fontname="Helvetica"]
+rankdir = LR
+graph [fontname="Helvetica"]
+node  [fontname="Helvetica", shape=box, style=filled, fillcolor=lightyellow]
+edge  [fontname="Helvetica"]
 
-  A [label="🌍 Global Price"]
-  B [label="🛒 Local Retail Price"]
-  C [label="🚜 Farmgate Price"]
+A [label="🌍 Global Price"]
+B [label="🛒 Local Retail Price"]
+C [label="🚜 Farmgate Price"]
 
-  A -> B [label="Lag 0–2 months", color="darkgreen"]
-  A -> C [label="Lag 0–3 months (indirect)", style="dashed", color="darkorange"]
-  B -> C [label="Lag 0–6 months", color="steelblue"]
+A -> B [label="Lag 0–2 months", color="darkgreen"]
+A -> C [label="Lag 0–3 months (indirect)", style="dashed", color="darkorange"]
+B -> C [label="Lag 0–10 months", color="steelblue"]
 }
 
 ```
-:::
-:::
+::::
+:::::
 
-## Other macro-economic factors affecting domestic prices {.tiny-text auto-animate="true"}
+## Imports and Prices {.tiny-text auto-animate="true"}
+
+::::: {.r-stack}
+
+:::: {.fragment .fade-out .tiny-text fragment-index="1"}
+
+### Current trends
+
+Since early 2025, both global rice prices and domestic retail and farmgate prices in the Philippines have been on a gradual downward trend, yet **import volumes have remained erratic rather than steadily rising**. Import volume have oscillated, with **notable spikes in April and June**. This suggests imports reacting to non-price related factors influencing trade dynamics such as opportunistic buying when import parity margins widened; shifts in government import policies; traders and authorities adjusting to fluctuating demand forecasts or logistical bottlenecks.
+
+```{r}
+#| label: imports_trends
+#| echo: false
+base_plot |> 
+  add_lines(data = data_external[["imports"]] |> 
+              filter(date>=ymd("2016-01-01")),
+            x=~date,
+            y=~Imports,
+            name = "Rice imports",
+            line = list(color = "#fbbb18", width = 1),
+            fill = "tozeroy",
+            fillcolor = "rgba(254, 234, 22,0.3)",
+            yaxis="y2",
+            hovertemplate = paste0(
+              "Rice imports: ",
+              "%{y:,.2f} mt<extra></extra>"
+            )
+  ) |> 
+  layout(
+    xaxis=list(range = c("2023-06-01", "2025-06-01")),
+    yaxis2 = list(title = "Rice imports (mt)", 
+                  overlaying = "y",
+                  side = "right", 
+                  showgrid = FALSE,
+                  titlefont = list(size = 14),
+                  tickfont = list(size = 12),
+                  automargin = TRUE),
+    margin = list(l = 50, r = 50, t = 50, b = 50)
+  )
+
+
+```
+::::
+
+:::: {.fragment .fade-in fragment-index=1 .tiny-text}
+:::: {.fragment .fade-out fragment-index=3}
+
+### Import influence on Local Retail price
 
 :::: {.r-stack}
 
-::: {.fragment fragment-index=1}
+::: {.fragment .fade-out fragment-index=2}
+The CCF shows positive correlations between import volume and retail prices from **lags -4 to +3**, indicating that increases in imports tend to coincide with, or slightly lead, increases in retail prices — particularly within the same month or the next 1–2 months.
 
-### Import Volume  ↔  Local Retail price
+While higher import volumes are typically expected to lower retail prices by increasing supply, the **observed pattern suggests the opposite**. This may point to **reverse causality**: rather than imports driving retail prices, rising retail prices may be prompting an increase in imports. In other words, the market may be responding to higher prices by importing more to stabilize supply.
+:::
 
-The CCF indicates a two-way relationship between imports and retail prices. Notably, import volumes show moderate positive correlations at lags 0 to +2, suggesting that changes in imports tend to coincide with, or lead to, shifts in local retail prices within the same month or within the next 1–2 months.
+::: {.fragment .fade-in-then-out fragment-index=2}
+However, it is important to note that the **CCF only measures correlation**, not causality. To determine whether import volume actually causes changes in retail prices, a Granger causality test is needed to formally assess the direction of influence.
+
+In this case, the **Granger causality test does not confirm a statistically significant causal effect**, suggesting that while import volume and retail prices are correlated, imports may not consistently provide additional predictive value beyond the existing patterns in domestic retail prices. This does not necessarily mean that imports have no impact—**it may indicate that their influence is delayed, indirect, or overshadowed by other, stronger domestic factors driving retail price behavior.**
+:::
+::::
+
 
 ```{r}
-#| label: ccf_imports
+#| label: imports_effect
 #| echo: false
 
-plot_ly(ccf_dfs$Imports$rprice, 
-        x = ~Lag, 
-        y = ~Correlation, 
-        type = "bar", 
+plot_ly(ccf_dfs$Imports$rprice,
+        x = ~Lag,
+        y = ~Correlation,
+        type = "bar",
         name = "CCF: Imports on Retail",
         width = 1000,
         height = 400) |>
   layout(xaxis = list(title = "Lag (Months)"),
          yaxis = list(title = "Cross-Correlation"),
          shapes = list(
-           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
+
+           #confidence bands
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
                 y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
-           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
-                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
-         ))
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+
+           #leads
+           list(type = "rect",
+                x0 = -4, x1 = 0,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+
+           #lag momentums
+
+           list(type = "rect",
+                x0 = 1, x1 = 3,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+
+         ),
+
+         annotations = list(
+           list(x = -2, y = 0.8, text = "Import volume influence<br>(Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 2, y = 0.8, text = "Retail price <br> response (Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+
+  ) |>
+  plotly::config(displayModeBar = FALSE)
+
+```
+
+::::
+::::
+
+:::: {.fragment .fade-in fragment-index=3}
+:::: {.fragment .fade-out fragment-index=5}
+
+###  Local retail price influence on Imports
+
+:::: {.r-stack .tiny-text}
+
+::: {.fragment .fade-out fragment-index=4}
+This CCF indicates that it is actually the domestic retail prices that leads import volume (**0-3 months**). After peak, the effect on import volume persists for up to **4 months**.
+
+This highlights a **reactive import strategy** where traders and policymakers may respond  to rising domestic prices by increasing imports to stabilize supply and mitigate further price hikes.
+
+```{r}
+#| label: rprice_Importeffect
+#| echo: false
+
+plot_ly(ccf_dfs$rprice$Imports,
+        x = ~Lag,
+        y = ~Correlation,
+        type = "bar",
+        name = "CCF: Retail on Imports",
+        width = 1000,
+        height = 400) |>
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+
+           #confidence bands
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+
+           #leads
+           list(type = "rect",
+                x0 = -3, x1 = 0,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+
+           #lag momentums
+
+           list(type = "rect",
+                x0 = 1, x1 = 4,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+
+         ),
+
+         annotations = list(
+           list(x = -1.5, y = 0.8, text = "Retail price influence<br>(Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 2.5, y = 0.8, text = "Import volume <br> response (Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+
+  ) |>
+  plotly::config(displayModeBar = FALSE)
 
 ```
 
 :::
 
-::: {.fragment fragment-index=2}
-### Granger Imports
-:::
+::: {.fragment .fade-in fragment-index=4}
 
-::: {.fragment fragment-index=3}
-
-### Stocks  ↔  Local farmgate price
+**Granger causality test** confirms this relationship suggesting that domestic retail prices Granger-cause import volumes with significant effect from lags 2-12. This means domestic retail prices as far as 12 months ago has influence on current import volumes
 
 ```{r}
-#| label: ccf_imports
+#| label:  rprice_Imports
 #| echo: false
 
-plot_ly(ccf_dfs$NFA$rprice, 
-        x = ~Lag, 
-        y = ~Correlation, 
-        type = "bar", 
+granger_results |>
+  filter(variable=="rprice" & target=="Imports") |>
+  select(lag,p.value) |>
+  mutate(lag = as.character(round(lag)),
+         p.value = ifelse(p.value < 0.001, "<0.001", sprintf("%.4f", p.value))
+         )|> 
+  t() |> 
+  as.data.frame() |> 
+  # 
+  # pivot_wider(names_from = lag,values_from=p.value) |> 
+  # mutate(row = "p.value") |> 
+  # bind_rows(tibble(row = 'lag',
+  #                  
+  #           )
+  kable(format= "markdown",
+        col.names = NULL,
+      caption = "Table. Granger Causality Summary table on domestic rice prices influencing Import volumes")
+
+```
+:::
+
+::::
+
+::::
+::::
+
+:::::
+
+## Stocks and Price {.tiny-text auto-animate="true"}
+
+<!-- StockPRICE - START -->
+:::::: {.r-stack}
+
+<!-- commercialStock-title -->
+::::: {.fragment .fade-out fragment-index=4} 
+
+### Commercial stocks
+
+<!-- comStock-rstack - START -->
+:::: {.r-stack}
+::: {.fragment .fade-out .tiny-text fragment-index="2"}
+**Current Trends**
+
+With both global and domestic rice prices on a general downward trend for the past 12 months, commercial stocks also declined due to reduced incentive for commercial traders to stockpile rice, as holding large inventories in a falling price environment can lead to financial losses. To maintain liquidity, traders are more likely to release existing stock into the market to avoid future losses, and may delay new imports or local purchases, anticipating even lower prices ahead.
+
+```{r}
+#| label: comStocks
+#| echo: false
+base_plot |> 
+  add_lines(data = data_external[["stocks"]] |> 
+              filter(date>=ymd("2016-01-01"),
+                     Stock == "Commercial"),
+            x=~date,
+            y=~Inventory,
+            name = ~Stock,
+            # color = ~Stock,
+            customdata = ~Stock,
+            # fillcolor = ~Stock,
+            line = list(color = "#fbbb18", width = 1),
+            fill = "tozeroy",
+            fillcolor = "rgba(254, 234, 22,0.3)",
+            yaxis="y2",
+            hovertemplate = paste0(
+              "%{customdata} Stocks: ",
+              "%{y:,.2f} mt<extra></extra>"
+            )
+  ) |> 
+  layout(
+    xaxis=list(range = c("2024-06-01", "2025-06-01")),
+    yaxis2 = list(title = "Rice stocks (mt)", 
+                  overlaying = "y",
+                  side = "right", 
+                  showgrid = FALSE,
+                  titlefont = list(size = 14),
+                  tickfont = list(size = 12),
+                  automargin = TRUE),
+    margin = list(l = 50, r = 50, t = 50, b = 50)
+  )
+
+
+```
+:::
+
+:::: {.fragment .fade-in fragment-index=2 .tiny-text}
+:::: {.fragment .fade-out fragment-index=4}
+**Commercial Stocks influence on Retail Prices**
+
+:::: {.r-stack}
+
+::: {.fragment .fade-out fragment-index=3}
+The cross-correlation between commercial stocks and domestic rice prices reveals a strong positive relationship, particularly from **lag -5 to +2**, indicating that increases in stocks often precede or coincide with price increases. This suggests that commercial stock buildup—possibly due to expectations of tighter supply or speculative hoarding—can drive rice prices upward within 2 to 5 months. At the same time, rising prices may also trigger short-term restocking behavior, although this effect quickly diminishes. These dynamics imply a **two-way interaction** where commercial stock levels both influence and respond to rice price movements.
+
+``` {r}
+#| label: ccf_comstocks_rprice
+#| echo: false
+
+
+
+plot_ly(ccf_dfs$Commercial$rprice,
+        x = ~Lag,
+        y = ~Correlation,
+        type = "bar",
         name = "CCF: Imports on Retail",
         width = 1000,
         height = 400) |>
   layout(xaxis = list(title = "Lag (Months)"),
          yaxis = list(title = "Cross-Correlation"),
          shapes = list(
-           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), 
+
+           #confidence bands
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
                 y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
-           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), 
-                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red"))
-         ))
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+
+           #leads
+           list(type = "rect",
+                x0 = -4, x1 = 0,
+                y0 = 0, y1 = 0.4,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+
+           #lag momentums
+
+           list(type = "rect",
+                x0 = 1, x1 = 3,
+                y0 = 0, y1 = 0.4,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+
+         ),
+
+         annotations = list(
+           list(x = -2, y = 0.35,text = "Commercial Stocks<br>Influence (Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 2, y = 0.35, text = "Retail price <br> response <br>(Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+
+  ) |>
+  plotly::config(displayModeBar = FALSE)
 
 ```
 
 :::
+
+::: {.fragment .fade-in-then-out fragment-index=3}
+However, **Granger-Causality test** results show that  only **domestic rice prices significantly predict changes in commercial stock levels**, while the reverse—stocks predicting prices—is not statistically supported. 
+
+**Rising prices may prompt traders to accumulate stocks in anticipation of continued gains, whereas falling prices may lead them to offload inventory**. Therefore, while cross-correlations suggest mutual influence, formal causality testing reinforces  that price changes more plausibly drive stock adjustments rather than the other way around.
+
+
+``` {r}
+#| label: ccf_comstocks_rprice2
+#| echo: false
+
+
+
+plot_ly(ccf_dfs$rprice$Commercial,
+        x = ~Lag,
+        y = ~Correlation,
+        type = "bar",
+        name = "CCF:Retail on Commercial Stocks",
+        width = 1000,
+        height = 400) |>
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+
+           #confidence bands
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+
+           #leads
+           list(type = "rect",
+                x0 = -5, x1 = 0,
+                y0 = 0, y1 = 0.4,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+
+           #lag momentums
+
+           list(type = "rect",
+                x0 = 1, x1 = 4,
+                y0 = 0, y1 = 0.4,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+
+         ),
+
+         annotations = list(
+           list(x = -2, y = 0.35,text = "Retail price<br>Influence (Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 2.5, y = 0.35, text = "Commercial stocks <br> response <br>(Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+
+  ) |>
+  plotly::config(displayModeBar = FALSE)
+
+```
+:::
+::::
+
 
 
 ::::
+::::
+
+::::
+ <!-- comStock-rstack - END  -->
+ 
+:::::
+
+<!-- commercialStock-title  END-->
+
+<!-- HouseStock-title-START -->
+::::: {.fragment .fade-in fragment-index=4}
+
+::::: {.fragment .fade-out fragment-index=7}
+
+### Household stocks
+
+<!-- HouseStack-rstack - START -->
+:::: {.r-stack .tiny-text}
+
+::: {.fragment .fade-out fragment-index=5}
+
+**Current trends**
+
+Gradually decreasing rice prices led to stable or slightly declining household stocks. Consumers have less urgency to purchase in bulk or hoard supplies, since there is no perceived threat of price spikes or shortages and they may buy only what is needed, anticipating continued or stable affordability in the near term
+
+```{r}
+#| label: houseStocks
+#| echo: false
+
+base_plot |>
+  add_lines(data = data_external[["stocks"]] |>
+              filter(date>=ymd("2016-01-01"),
+                     Stock == "Household"),
+            x=~date,
+            y=~Inventory,
+            name = ~Stock,
+            # color = ~Stock,
+            customdata = ~Stock,
+            # fillcolor = ~Stock,
+            line = list(color = "#fbbb18", width = 1),
+            fill = "tozeroy",
+            fillcolor = "rgba(254, 234, 22,0.3)",
+            yaxis="y2",
+            hovertemplate = paste0(
+              "%{customdata} Stocks: ",
+              "%{y:,.2f} mt<extra></extra>"
+            )
+  ) |>
+  layout(
+    xaxis=list(range = c("2023-06-01", "2025-06-01")),
+    yaxis2 = list(title = "Rice stocks (mt)",
+                  overlaying = "y",
+                  side = "right",
+                  showgrid = FALSE,
+                  titlefont = list(size = 14),
+                  tickfont = list(size = 12),
+                  automargin = TRUE),
+    margin = list(l = 50, r = 50, t = 50, b = 50)
+  )
+
+
+```
+:::
+
+<!-- houseStock CCF START -->
+:::: {.fragment .fade-in fragment-index=5 .tiny-text}
+
+:::: {.fragment .fade-out fragment-index=7}
+**Household Stocks influence on Retail Prices**
+
+:::: {.r-stack}
+
+::: {.fragment .fade-out fragment-index=6}
+
+**The CCF between household stocks and domestic rice prices shows a strong negative correlation, peaking at lag 0 (−0.430)**, indicating that higher household stocks are associated with lower rice prices. This suggests that when households hold more rice—either in anticipation of price increases or due to abundant supply—market demand decreases, putting downward pressure on prices. The sustained negative correlation across lags implies that **household inventories play a buffering role in price movements**.
+
+``` {r}
+#| label: ccf_houseStocks_rprice
+#| echo: false
+
+plot_ly(ccf_dfs$Household$rprice,
+        x = ~Lag,
+        y = ~Correlation,
+        type = "bar",
+        name = "CCF: Household on Retail",
+        width = 1000,
+        height = 400) |>
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+
+           #confidence bands
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+
+           #leads
+           list(type = "rect",
+                x0 = -4, x1 = 0,
+                y0 = 0, y1 = -0.5,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+
+           #lag momentums
+
+           list(type = "rect",
+                x0 = 1, x1 = 3,
+                y0 = 0, y1 = -0.5,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+
+         ),
+
+         annotations = list(
+           list(x = -2, y = -0.5,text = "Household Stocks<br>Influence (Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 2, y = -0.5, text = "Retail price <br> response <br>(Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+
+  ) |>
+  plotly::config(displayModeBar = FALSE)
+
+```
+
+:::
+
+::: {.fragment .fade-in-then-out fragment-index=6}
+However, **Granger-Causality test** confirm that only the direction of **retail prices predicting household stocks is statistically significant**, while the reverse—household stocks predicting prices—is not. This means that changes in rice prices precede and help explain future movements in household inventories, rather than the other way around. This result supports the idea that households respond to market signals: when prices rise or are expected to rise,  households are more likely to purchase in larger quantities, taking advantage of lower costs to build up their stocks in anticipation of future price increases. The implication is that household stocking behavior is largely reactive, driven by perceived price trends rather than being a leading force that directly shapes market prices.
+
+``` {r}
+#| label: ccf_houseStocks_rprice2
+#| echo: false
+
+plot_ly(ccf_dfs$rprice$Household,
+        x = ~Lag,
+        y = ~Correlation,
+        type = "bar",
+        name = "CCF: Household on Retail",
+        width = 1000,
+        height = 400) |>
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+
+           #confidence bands
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+
+           #leads
+           list(type = "rect",
+                x0 = -4, x1 = 0,
+                y0 = 0, y1 = -0.5,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+
+           #lag momentums
+
+           list(type = "rect",
+                x0 = 1, x1 = 3,
+                y0 = 0, y1 = -0.5,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+
+         ),
+
+         annotations = list(
+           list(x = -2, y = -0.5,text = "Retail prices Influence (Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 2, y = -0.5, text = " Household stocks, <br> response <br>(Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+
+  ) |>
+  plotly::config(displayModeBar = FALSE)
+
+```
+
+:::
+::::
+
+
+
+::::
+::::
+
+<!-- houseStock CCF END -->
+
+::::
+<!-- HouseStack-rstack - END -->
+:::::
+:::::
+<!-- HouseStock-title-END -->
+
+
+
+<!-- NFAStock-title-START -->
+<!-- ::::: {.fragment .fade-in fragment-index=7} -->
+
+<!-- ::::: {.fragment .fade-out fragment-index=10} -->
+
+<!-- ### NFA stocks -->
+
+<!-- :::: {.r-stack .tiny-text} -->
+
+<!-- ::: {.fragment .fade-out fragment-index=8} -->
+
+<!-- **Current trends** -->
+
+<!-- With decreasing prices, buffer stock increases as the government, through NFA,rebuild or augment buffer stocks at a lower cost. With cheaper local procurement or global imports, the government have increased its reserves without putting as much pressure on procurement budgets and storage capacity. -->
+
+<!-- ```{r} -->
+<!-- #| label: nfaStocks -->
+<!-- #| echo: false -->
+
+<!-- base_plot |> -->
+<!--   add_lines(data = data_external[["stocks"]] |> -->
+<!--               filter(date>=ymd("2016-01-01"), -->
+<!--                      Stock == "NFA"), -->
+<!--             x=~date, -->
+<!--             y=~Inventory, -->
+<!--             name = ~Stock, -->
+<!--             # color = ~Stock, -->
+<!--             customdata = ~Stock, -->
+<!--             # fillcolor = ~Stock, -->
+<!--             line = list(color = "#fbbb18", width = 1), -->
+<!--             fill = "tozeroy", -->
+<!--             fillcolor = "rgba(254, 234, 22,0.3)", -->
+<!--             yaxis="y2", -->
+<!--             hovertemplate = paste0( -->
+<!--               "%{customdata} Stocks: ", -->
+<!--               "%{y:,.2f} mt<extra></extra>" -->
+<!--             ) -->
+<!--   ) |> -->
+<!--   layout( -->
+<!--     xaxis=list(range = c("2024-06-01", "2025-06-01")), -->
+<!--     yaxis2 = list(title = "Rice stocks (mt)", -->
+<!--                   overlaying = "y", -->
+<!--                   side = "right", -->
+<!--                   showgrid = FALSE, -->
+<!--                   titlefont = list(size = 14), -->
+<!--                   tickfont = list(size = 12), -->
+<!--                   automargin = TRUE), -->
+<!--     margin = list(l = 50, r = 50, t = 50, b = 50) -->
+<!--   ) -->
+
+
+<!-- ``` -->
+<!-- ::: -->
+
+<!-- <!-- houseStock CCF START --> -->
+<!-- :::: {.fragment .fade-in fragment-index=8 .tiny-text} -->
+
+<!-- :::: {.fragment .fade-out fragment-index=9} -->
+<!-- **NFA Stocks influence on Retail Prices** -->
+
+<!-- :::: {.r-stack} -->
+
+<!-- ::: {.fragment .fade-out fragment-index=8} -->
+
+<!-- **The CCF between household stocks and domestic rice prices shows a strong negative correlation, peaking at lag 0 (−0.430)**, indicating that higher household stocks are associated with lower rice prices. This suggests that when households hold more rice—either in anticipation of price increases or due to abundant supply—market demand decreases, putting downward pressure on prices. The sustained negative correlation across lags implies that **household inventories play a buffering role in price movements**. -->
+
+<!-- ``` {r} -->
+<!-- #| label: ccf_nfa_rprice -->
+<!-- #| echo: false -->
+
+<!-- plot_ly(ccf_dfs$NFA$rprice, -->
+<!--         x = ~Lag, -->
+<!--         y = ~Correlation, -->
+<!--         type = "bar", -->
+<!--         name = "CCF: NFA on Retail", -->
+<!--         width = 1000, -->
+<!--         height = 400) |> -->
+<!--   layout(xaxis = list(title = "Lag (Months)"), -->
+<!--          yaxis = list(title = "Cross-Correlation"), -->
+<!--          shapes = list( -->
+
+<!--            #confidence bands -->
+<!--            list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), -->
+<!--                 y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")), -->
+<!--            list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), -->
+<!--                 y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")), -->
+
+<!--            #leads -->
+<!--            list(type = "rect", -->
+<!--                 x0 = -12, x1 = -5, -->
+<!--                 y0 = 0, y1 =0.65, -->
+<!--                 fillcolor = "rgba(0, 128, 0, 0.2)", -->
+<!--                 line = list(width = 0)), -->
+
+<!--            #lag momentums -->
+
+<!--            list(type = "rect", -->
+<!--                 x0 = 0, x1 = 4, -->
+<!--                 y0 = 0, y1 = -0.65, -->
+<!--                 fillcolor = "rgba(0, 0, 255, 0.2)", -->
+<!--                 line = list(width = 0)) -->
+
+<!--          ), -->
+
+<!--          annotations = list( -->
+<!--            list(x = -2, y = 0.6,text = "NFA Stocks<br>Influence (Lead)", showarrow = FALSE, -->
+<!--                 font = list(color = "green", size = 12)), -->
+<!--            list(x = 2, y = -0.5, text = "Retail price <br> response <br>(Lag)", showarrow = FALSE, -->
+<!--                 font = list(color = "blue", size = 12)) -->
+<!--          ) -->
+
+<!--   ) |> -->
+<!--   plotly::config(displayModeBar = FALSE) -->
+
+<!-- ``` -->
+
+<!-- ::: -->
+
+<!-- ::: {.fragment .fade-in-then-out fragment-index=6} -->
+<!-- However, **Granger-Causality test** confirm that only the direction of **retail prices predicting household stocks is statistically significant**, while the reverse—household stocks predicting prices—is not. This means that changes in rice prices precede and help explain future movements in household inventories, rather than the other way around. This result supports the idea that households respond to market signals: when prices rise or are expected to rise,  households are more likely to purchase in larger quantities, taking advantage of lower costs to build up their stocks in anticipation of future price increases. The implication is that household stocking behavior is largely reactive, driven by perceived price trends rather than being a leading force that directly shapes market prices. -->
+
+<!-- ``` {r} -->
+<!-- #| label: ccf_NFA_rprice2 -->
+<!-- #| echo: false -->
+
+<!-- plot_ly(ccf_dfs$rprice$Household, -->
+<!--         x = ~Lag, -->
+<!--         y = ~Correlation, -->
+<!--         type = "bar", -->
+<!--         name = "CCF: Household on Retail", -->
+<!--         width = 1000, -->
+<!--         height = 400) |> -->
+<!--   layout(xaxis = list(title = "Lag (Months)"), -->
+<!--          yaxis = list(title = "Cross-Correlation"), -->
+<!--          shapes = list( -->
+
+<!--            #confidence bands -->
+<!--            list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)), -->
+<!--                 y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")), -->
+<!--            list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)), -->
+<!--                 y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")), -->
+
+<!--            #leads -->
+<!--            list(type = "rect", -->
+<!--                 x0 = -4, x1 = 0, -->
+<!--                 y0 = 0, y1 = -0.5, -->
+<!--                 fillcolor = "rgba(0, 128, 0, 0.2)", -->
+<!--                 line = list(width = 0)), -->
+
+<!--            #lag momentums -->
+
+<!--            list(type = "rect", -->
+<!--                 x0 = 1, x1 = 3, -->
+<!--                 y0 = 0, y1 = -0.5, -->
+<!--                 fillcolor = "rgba(0, 0, 255, 0.2)", -->
+<!--                 line = list(width = 0)) -->
+
+<!--          ), -->
+
+<!--          annotations = list( -->
+<!--            list(x = -2, y = -0.5,text = "Retail prices Influence (Lead)", showarrow = FALSE, -->
+<!--                 font = list(color = "green", size = 12)), -->
+<!--            list(x = 2, y = -0.5, text = " Household stocks, <br> response <br>(Lag)", showarrow = FALSE, -->
+<!--                 font = list(color = "blue", size = 12)) -->
+<!--          ) -->
+
+<!--   ) |> -->
+<!--   plotly::config(displayModeBar = FALSE) -->
+
+<!-- ``` -->
+
+<!-- ::: -->
+<!-- :::: -->
+
+
+
+<!-- :::: -->
+<!-- :::: -->
+
+<!-- houseStock CCF END -->
+
+::::
+<!-- HouseStack-rstack - END -->
+:::::
+:::::
+<!-- HouseStock-title-END -->
+
+
+::::::
+<!-- StockPRICE - END -->
+
+
+
+<!-- **Government/NFA Stocks** -->
+
+<!-- With decreasing prices, buffer stock increases as the government, through NFA,rebuild or augment buffer stocks at a lower cost. With cheaper local procurement or global imports, the government have increased its reserves without putting as much pressure on procurement budgets and storage capacity. -->
+
+
+<!-- ::: -->
+
+<!-- ::: {.fragment .fade-in-then-out .tiny-text fragment-index="5"} -->
+<!-- **Total Stocks** -->
+
+<!-- The combined effect of declining commercial and household stocks, offset by increasing government stocks, leads to a mixed but generally stable total stock levels. -->
+
+<!-- ```{r} -->
+<!-- #| label: TotStocks -->
+<!-- #| echo: false -->
+
+<!-- base_plot |>  -->
+<!--   add_lines(data = data_external[["stocks"]] |>  -->
+<!--               filter(date>=ymd("2016-01-01"), -->
+<!--                      Stock == "Total"), -->
+<!--             x=~date, -->
+<!--             y=~Inventory, -->
+<!--             name = ~Stock, -->
+<!--             # color = ~Stock, -->
+<!--             customdata = ~Stock, -->
+<!--             # fillcolor = ~Stock, -->
+<!--             line = list(color = "#fbbb18", width = 1), -->
+<!--             fill = "tozeroy", -->
+<!--             fillcolor = "rgba(254, 234, 22,0.3)", -->
+<!--             yaxis="y2", -->
+<!--             hovertemplate = paste0( -->
+<!--               "%{customdata} Stocks: ", -->
+<!--               "%{y:,.2f} mt<extra></extra>" -->
+<!--             ) -->
+<!--   ) |>  -->
+<!--   layout( -->
+<!--     xaxis=list(range = c("2023-06-01", "2025-06-01")), -->
+<!--     yaxis2 = list(title = "Rice stocks (mt)",  -->
+<!--                   overlaying = "y", -->
+<!--                   side = "right",  -->
+<!--                   showgrid = FALSE, -->
+<!--                   titlefont = list(size = 14), -->
+<!--                   tickfont = list(size = 12), -->
+<!--                   automargin = TRUE), -->
+<!--     margin = list(l = 50, r = 50, t = 50, b = 50) -->
+<!--   ) -->
+
+
+<!-- ``` -->
+<!-- ::: -->
+<!-- ::: -->
+
+
+
+<!-- :::: {.fragment .fade-in-then-out fragment-index=2} -->
+
+<!-- ### Total stocks  ↔  Local Retail price -->
+
+<!-- ::: { .r-stack .tiny-text} -->
+
+<!-- ::: {.fragment .fade-out fragment-index=3} -->
+
+<!-- CCF results indicate that total stocks have a leading effect on domestic retail prices. Stock levels from 8 to 12 months earlier show moderate positive correlations with current retail prices, suggesting that past stock trends may influence retail price movements. However, from lag -2 to 0, the correlation becomes increasingly negative, peaking at lag 0 with a value of -0.301. This means that higher current stocks are associated with lower retail prices, likely due to increased market supply exerting downward pressure on consumer prices. -->
+
+
+<!-- ```{r} -->
+<!-- #| label: ccf_stocks_rprice -->
+<!-- #| echo: false -->
+
+<!-- plot_ly(ccf_dfs$Total$rprice,  -->
+<!--         x = ~Lag,  -->
+<!--         y = ~Correlation,  -->
+<!--         type = "bar",  -->
+<!--         name = "CCF: stocks on Retail", -->
+<!--         width = 1000, -->
+<!--         height = 250) |> -->
+<!--   layout(title = "Total stocks on Retail prices", -->
+<!--          xaxis = list(title = "Lag (Months)"), -->
+<!--          yaxis = list(title = "Cross-Correlation"), -->
+<!--          shapes = list( -->
+<!--            list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),  -->
+<!--                 y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")), -->
+<!--            list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),  -->
+<!--                 y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")) -->
+<!--          )) -->
+
+<!-- ``` -->
+<!-- ::: -->
+
+
+<!-- ::: {.fragment .fade-in-then-out fragment-index=3} -->
+<!-- ```{r} -->
+<!-- #| label: ccf_stocks_fprice -->
+<!-- #| echo: false -->
+
+<!-- plot_ly(ccf_dfs$Total$fprice,  -->
+<!--         x = ~Lag,  -->
+<!--         y = ~Correlation,  -->
+<!--         type = "bar",  -->
+<!--         name = "CCF: Imports on Retail", -->
+<!--         width = 1000, -->
+<!--         height = 250) |> -->
+<!--   layout(title = "Total stocks on farmgate prices", -->
+<!--          xaxis = list(title = "Lag (Months)"), -->
+<!--          yaxis = list(title = "Cross-Correlation"), -->
+<!--          shapes = list( -->
+<!--            list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),  -->
+<!--                 y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")), -->
+<!--            list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),  -->
+<!--                 y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")) -->
+<!--          )) -->
+
+<!-- ``` -->
+<!-- ::: -->
+
+<!-- ::: -->
+
+<!-- :::: -->
+
+<!-- ::::: -->
+
+
 
 
 
@@ -812,6 +1861,8 @@ plot_ly(ccf_dfs$NFA$rprice,
 Since the start of 2025, declining global and local rice prices have contributed to negative rice inflation, easing upward pressure on overall prices. Given rice's high weight in the consumer basket, this drop has significantly helped slow down headline inflation.
 
 ```{r}
+#| label: inflation
+#| echo: false
 base_plot |> 
   add_lines(data = data_external[["riceinf"]] |> 
               filter(date>=ymd("2016-01-01")),
@@ -823,10 +1874,10 @@ base_plot |>
             fillcolor = "rgba(254, 234, 22,0.3)",
             yaxis="y2",
             hovertemplate = paste0(
-                        "Rice Inflation: ",
-                        "%{y:,.2f} %<extra></extra>"
-                      )
-            ) |> 
+              "Rice Inflation: ",
+              "%{y:,.2f} %<extra></extra>"
+            )
+  ) |> 
   layout(
     xaxis=list(range = c("2023-06-01", "2025-06-01")),
     yaxis2 = list(title = "Rice Inflation (%)", 
@@ -842,215 +1893,6 @@ base_plot |>
 ```
 
 
-## Imports and stock levels {.tiny-text auto-animate="true"}
-
-::: r-stack
-::: {.fragment .fade-out .extra-tiny-text fragment-index="2"}
-**Imports** 
-
-Since early 2025, both global rice prices and domestic retail and farmgate prices in the Philippines have been on a gradual downward trend, yet import volumes have remained erratic rather than steadily rising. Import volume have oscillated, with notable spikes in April and June. This suggests non-price related factors influencing trade dynamics such as opportunistic buying when import parity margins widened; shifts in government import policies; traders and authorities adjusting to fluctuating demand forecasts or logistical bottlenecks.
-
-```{r}
-
-base_plot |> 
-    add_lines(data = data_external[["imports"]] |> 
-              filter(date>=ymd("2016-01-01")),
-            x=~date,
-            y=~Imports,
-            name = "Rice imports",
-            line = list(color = "#fbbb18", width = 1),
-            fill = "tozeroy",
-            fillcolor = "rgba(254, 234, 22,0.3)",
-            yaxis="y2",
-            hovertemplate = paste0(
-                        "Rice imports: ",
-                        "%{y:,.2f} mt<extra></extra>"
-                      )
-            ) |> 
-  layout(
-    xaxis=list(range = c("2023-06-01", "2025-06-01")),
-    yaxis2 = list(title = "Rice imports (mt)", 
-                  overlaying = "y",
-                  side = "right", 
-                  showgrid = FALSE,
-                  titlefont = list(size = 14),
-                  tickfont = list(size = 12),
-                  automargin = TRUE),
-    margin = list(l = 50, r = 50, t = 50, b = 50)
-  )
-
-
-```
-:::
-
-::: {.fragment .fade-in-then-out .tiny-text fragment-index="2"}
-**Commercial Stocks**
-
-With both global and domestic rice prices on a downward trend, commercial stocks also declined due to reduced incentive for commercial traders to stockpile rice, as holding large inventories in a falling price environment can lead to financial losses. To maintain liquidity, traders are more likely to release existing stock into the market to avoid future losses, and may delay new imports or local purchases, anticipating even lower prices ahead.
-
-```{r}
-
-base_plot |> 
-    add_lines(data = data_external[["stocks"]] |> 
-              filter(date>=ymd("2016-01-01"),
-                     Stock == "Commercial"),
-            x=~date,
-            y=~Inventory,
-            name = ~Stock,
-            # color = ~Stock,
-            customdata = ~Stock,
-            # fillcolor = ~Stock,
-            line = list(color = "#fbbb18", width = 1),
-            fill = "tozeroy",
-            fillcolor = "rgba(254, 234, 22,0.3)",
-            yaxis="y2",
-            hovertemplate = paste0(
-                        "%{customdata} Stocks: ",
-                        "%{y:,.2f} mt<extra></extra>"
-                      )
-            ) |> 
-  layout(
-    xaxis=list(range = c("2023-06-01", "2025-06-01")),
-    yaxis2 = list(title = "Rice stocks (mt)", 
-                  overlaying = "y",
-                  side = "right", 
-                  showgrid = FALSE,
-                  titlefont = list(size = 14),
-                  tickfont = list(size = 12),
-                  automargin = TRUE),
-    margin = list(l = 50, r = 50, t = 50, b = 50)
-  )
-
-
-```
-:::
-
-::: {.fragment .fade-in-then-out .tiny-text fragment-index="3"}
-**Household Stocks**
-
-For households, gradually decreasing rice prices led to stable or slightly declining household stocks. Consumers have less urgency to purchase in bulk or hoard supplies, since there is no perceived threat of price spikes or shortages and they may buy only what is needed, anticipating continued or stable affordability in the near term.
-
-```{r}
-
-base_plot |> 
-    add_lines(data = data_external[["stocks"]] |> 
-              filter(date>=ymd("2016-01-01"),
-                     Stock == "Household"),
-            x=~date,
-            y=~Inventory,
-            name = ~Stock,
-            # color = ~Stock,
-            customdata = ~Stock,
-            # fillcolor = ~Stock,
-            line = list(color = "#fbbb18", width = 1),
-            fill = "tozeroy",
-            fillcolor = "rgba(254, 234, 22,0.3)",
-            yaxis="y2",
-            hovertemplate = paste0(
-                        "%{customdata} Stocks: ",
-                        "%{y:,.2f} mt<extra></extra>"
-                      )
-            ) |> 
-  layout(
-    xaxis=list(range = c("2023-06-01", "2025-06-01")),
-    yaxis2 = list(title = "Rice stocks (mt)", 
-                  overlaying = "y",
-                  side = "right", 
-                  showgrid = FALSE,
-                  titlefont = list(size = 14),
-                  tickfont = list(size = 12),
-                  automargin = TRUE),
-    margin = list(l = 50, r = 50, t = 50, b = 50)
-  )
-
-
-```
-:::
-
-::: {.fragment .fade-in-then-out .tiny-text fragment-index="4"}
-**Government/NFA Stocks**
-
-With decreasing prices, buffer stock increases as the government, through NFA,rebuild or augment buffer stocks at a lower cost. With cheaper local procurement or global imports, the government have increased its reserves without putting as much pressure on procurement budgets and storage capacity.
-
-```{r}
-
-base_plot |> 
-    add_lines(data = data_external[["stocks"]] |> 
-              filter(date>=ymd("2016-01-01"),
-                     Stock == "NFA"),
-            x=~date,
-            y=~Inventory,
-            name = ~Stock,
-            # color = ~Stock,
-            customdata = ~Stock,
-            # fillcolor = ~Stock,
-            line = list(color = "#fbbb18", width = 1),
-            fill = "tozeroy",
-            fillcolor = "rgba(254, 234, 22,0.3)",
-            yaxis="y2",
-            hovertemplate = paste0(
-                        "%{customdata} Stocks: ",
-                        "%{y:,.2f} mt<extra></extra>"
-                      )
-            ) |> 
-  layout(
-    xaxis=list(range = c("2023-06-01", "2025-06-01")),
-    yaxis2 = list(title = "Rice stocks (mt)", 
-                  overlaying = "y",
-                  side = "right", 
-                  showgrid = FALSE,
-                  titlefont = list(size = 14),
-                  tickfont = list(size = 12),
-                  automargin = TRUE),
-    margin = list(l = 50, r = 50, t = 50, b = 50)
-  )
-
-
-```
-:::
-
-::: {.fragment .fade-in-then-out .tiny-text fragment-index="5"}
-**Total Stocks**
-
-The combined effect of declining commercial and household stocks, offset by increasing government stocks, leads to a mixed but generally stable total stock levels.
-
-```{r}
-
-base_plot |> 
-    add_lines(data = data_external[["stocks"]] |> 
-              filter(date>=ymd("2016-01-01"),
-                     Stock == "Total"),
-            x=~date,
-            y=~Inventory,
-            name = ~Stock,
-            # color = ~Stock,
-            customdata = ~Stock,
-            # fillcolor = ~Stock,
-            line = list(color = "#fbbb18", width = 1),
-            fill = "tozeroy",
-            fillcolor = "rgba(254, 234, 22,0.3)",
-            yaxis="y2",
-            hovertemplate = paste0(
-                        "%{customdata} Stocks: ",
-                        "%{y:,.2f} mt<extra></extra>"
-                      )
-            ) |> 
-  layout(
-    xaxis=list(range = c("2023-06-01", "2025-06-01")),
-    yaxis2 = list(title = "Rice stocks (mt)", 
-                  overlaying = "y",
-                  side = "right", 
-                  showgrid = FALSE,
-                  titlefont = list(size = 14),
-                  tickfont = list(size = 12),
-                  automargin = TRUE),
-    margin = list(l = 50, r = 50, t = 50, b = 50)
-  )
-
-
-```
-:::
-:::
 
 ## Year-on-Year comparison (2024v2025) {.tiny-text auto-animate="true"}
 
@@ -1071,21 +1913,21 @@ With the continued decline in global rice prices throughout 2025, domestic retai
 #| echo: false
 
 plot_ly(width="1000",height="500") |>
-        add_bars(data = pricedata_yoy,
-            x=~date,
-            y=~rprice_yoy,
-            yaxis = "y",
-            name = "Retail Price Year on Year (YOY) Decline",
-            marker = list(
-              color = "#fbbb18",
-              line = list(color = "brown", width = 1.5)
-            ),
-            legendgroup = "domestic prices",
-            hovertemplate = paste0(
-                        "%{fullData.name} : ",
-                        "%{y:,.2f} %<extra></extra>"
-                      )
-            ) |> 
+  add_bars(data = pricedata_yoy,
+           x=~date,
+           y=~rprice_yoy,
+           yaxis = "y",
+           name = "Retail Price Year on Year (YOY) Decline",
+           marker = list(
+             color = "#fbbb18",
+             line = list(color = "brown", width = 1.5)
+           ),
+           legendgroup = "domestic prices",
+           hovertemplate = paste0(
+             "%{fullData.name} : ",
+             "%{y:,.2f} %<extra></extra>"
+           )
+  ) |> 
   add_lines(data =data_edited[["wholesale_prices"]] |> 
               filter(type =="rmr"),
             x = ~date,
@@ -1122,8 +1964,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "black", dash = "dash")) |>
-    add_lines(data =data_edited[["ipp"]] |> 
-                filter(type == "Vietnam 25%"),
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Vietnam 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
@@ -1131,8 +1973,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#FF3F3F", dash = "dash")) |>
-      add_lines(data =data_edited[["ipp"]] |> 
-                filter(type == "Thai 25%"),
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Thai 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
@@ -1140,8 +1982,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#65DA65", dash = "dash")) |>
-      add_lines(data =data_edited[["ipp"]] |> 
-                filter(type == "Pakistan 25%"),
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Pakistan 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
@@ -1149,8 +1991,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#EE82EE", dash = "dash")) |>
-layout(hovermode='x unified',
-       xaxis = list(title = "Date",visible = T , showgrid=T,
+  layout(hovermode='x unified',
+         xaxis = list(title = "Date",visible = T , showgrid=T,
                       range = c("2024-12-15", "2025-06-15")),
          yaxis2 = list(title = "Rice Price (₱/kg)",
                        overlaying = "y",
@@ -1160,18 +2002,18 @@ layout(hovermode='x unified',
                        tickfont = list(size = 12),
                        automargin = TRUE,
                        showgrid=T),
-       yaxis = list(title = "% Decline ",
-                    range = c(0, 20),
-                  side = "right", 
-                  showgrid = F),
-       legend = list(
-         x=0,
-         y=-0.5,
-         xanchor='left',
-         yanchor='top',
-         orientation = 'h'
-       ),
-       
+         yaxis = list(title = "% Decline ",
+                      range = c(0, 20),
+                      side = "right", 
+                      showgrid = F),
+         legend = list(
+           x=0,
+           y=-0.5,
+           xanchor='left',
+           yanchor='top',
+           orientation = 'h'
+         ),
+         
          showlegend = T) |> 
   rangeslider()
 
@@ -1190,23 +2032,25 @@ Since we have established that retail prices influence and lead farmgate prices,
 
 
 ```{r}
+#| label: farmgate_YoY
+#| echo: false
 
 plot_ly(width="1000",height="500") |>
-        add_bars(data = pricedata_yoy,
-            x=~date,
-            y=~farmgate_yoy ,
-            yaxis = "y",
-            name = "Farmgate Price Year on Year (YOY) Decline",
-            marker = list(
-              color = "#fbbb18",
-              line = list(color = "brown", width = 1.5)
-            ),
-            legendgroup = "domestic prices",
-            hovertemplate = paste0(
-                        "%{fullData.name} : ",
-                        "%{y:,.2f} %<extra></extra>"
-                      )
-            ) |> 
+  add_bars(data = pricedata_yoy,
+           x=~date,
+           y=~farmgate_yoy ,
+           yaxis = "y",
+           name = "Farmgate Price Year on Year (YOY) Decline",
+           marker = list(
+             color = "#fbbb18",
+             line = list(color = "brown", width = 1.5)
+           ),
+           legendgroup = "domestic prices",
+           hovertemplate = paste0(
+             "%{fullData.name} : ",
+             "%{y:,.2f} %<extra></extra>"
+           )
+  ) |> 
   add_lines(data =data_edited[["wholesale_prices"]] |> 
               filter(type =="rmr"),
             x = ~date,
@@ -1243,8 +2087,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "black", dash = "dash")) |>
-    add_lines(data =data_edited[["ipp"]] |> 
-                filter(type == "Vietnam 25%"),
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Vietnam 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
@@ -1252,8 +2096,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#FF3F3F", dash = "dash")) |>
-      add_lines(data =data_edited[["ipp"]] |> 
-                filter(type == "Thai 25%"),
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Thai 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
@@ -1261,8 +2105,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#65DA65", dash = "dash")) |>
-      add_lines(data =data_edited[["ipp"]] |> 
-                filter(type == "Pakistan 25%"),
+  add_lines(data =data_edited[["ipp"]] |> 
+              filter(type == "Pakistan 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
@@ -1270,8 +2114,8 @@ plot_ly(width="1000",height="500") |>
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#EE82EE", dash = "dash")) |>
-layout(hovermode='x unified',
-       xaxis = list(title = "Date",visible = T , showgrid=T,
+  layout(hovermode='x unified',
+         xaxis = list(title = "Date",visible = T , showgrid=T,
                       range = c("2024-12-15", "2025-06-15")),
          yaxis2 = list(title = "Rice Price (₱/kg)",
                        overlaying = "y",
@@ -1281,18 +2125,18 @@ layout(hovermode='x unified',
                        tickfont = list(size = 12),
                        automargin = TRUE,
                        showgrid=T),
-       yaxis = list(title = "% Decline ",
-                    range = c(0, 35),
-                  side = "right", 
-                  showgrid = F),
-       legend = list(
-         x=0,
-         y=-0.5,
-         xanchor='left',
-         yanchor='top',
-         orientation = 'h'
-       ),
-       
+         yaxis = list(title = "% Decline ",
+                      range = c(0, 35),
+                      side = "right", 
+                      showgrid = F),
+         legend = list(
+           x=0,
+           y=-0.5,
+           xanchor='left',
+           yanchor='top',
+           orientation = 'h'
+         ),
+         
          showlegend = T) |> 
   rangeslider()
 
@@ -1308,43 +2152,45 @@ layout(hovermode='x unified',
 A sharper increasing trend for YoY % decline in farmgate prices than retail suggests farmers are absorbing more of the price drop, leading to reduced incomes and a widening gap between what consumers pay and what farmers earn.
 
 ```{r}
+#| label: YOY_trends
+#| echo: false
 
 plot_ly(width="1000",height="500") |>
-        add_lines(data = pricedata_yoy,
+  add_lines(data = pricedata_yoy,
             x=~date,
             y=~farmgate_yoy ,
             name = "Farmgate Price Year on Year (YOY) Decline",
             line = list(color = "darkorange"),
             hovertemplate = paste0(
-                        "%{fullData.name} : ",
-                        "%{y:,.2f} %<extra></extra>"
-                      )
-            ) |> 
-          add_lines(data = pricedata_yoy,
+              "%{fullData.name} : ",
+              "%{y:,.2f} %<extra></extra>"
+            )
+  ) |> 
+  add_lines(data = pricedata_yoy,
             x=~date,
             y=~rprice_yoy ,
             name = "Retail Price Year on Year (YOY) Decline",
             line = list(color = "darkgreen"),
             hovertemplate = paste0(
-                        "%{fullData.name} : ",
-                        "%{y:,.2f} %<extra></extra>"
-                      )
-            ) |> 
+              "%{fullData.name} : ",
+              "%{y:,.2f} %<extra></extra>"
+            )
+  ) |> 
   layout(hovermode='x unified',
-       xaxis = list(title = "Date",visible = T , showgrid=T,
+         xaxis = list(title = "Date",visible = T , showgrid=T,
                       range = c("2024-12-15", "2025-06-15")),
-       yaxis = list(title = "% Decline ",
-                    # range = c(0, 20),
-                  side = "right", 
-                  showgrid = F),
-       legend = list(
-         x=0,
-         y=-0.5,
-         xanchor='left',
-         yanchor='top',
-         orientation = 'h'
-       ),
-       
+         yaxis = list(title = "% Decline ",
+                      # range = c(0, 20),
+                      side = "right", 
+                      showgrid = F),
+         legend = list(
+           x=0,
+           y=-0.5,
+           xanchor='left',
+           yanchor='top',
+           orientation = 'h'
+         ),
+         
          showlegend = T) |> 
   rangeslider()
 
@@ -1359,26 +2205,26 @@ plot_ly(width="1000",height="500") |>
 :::{.tiny-text}
 
 - **Global & Local Price Trends**  
-  – All price series (global IPP, wholesale, retail, farmgate) have been on a **gradual downward trajectory** since mid‑2024, with local markets responding within 2–4 months of global shifts.
+– All price series (global IPP, wholesale, retail, farmgate) have been on a **gradual downward trajectory** since mid‑2024, with local markets responding within 2–4 months of global shifts.
 
 - **Price Transmission Pathway**  
-  – **Global → Retail**: Strong Granger causality at lag 2 $(p=0.022)$ and CCF peaks at lags 0–4.  
-  – **Retail → Farmgate**: Significant Granger causality at lag 6 $(p =0.043)$ and CCF peaks at lags 0–2.  
-  – **Global → Farmgate**: High CCF at lags 0–3 but **no direct Granger effect**, indicating **indirect transmission** via retail.
+– **Global → Retail**: Strong Granger causality at lag 2 $(p=0.022)$ and CCF peaks at lags 0–4.  
+– **Retail → Farmgate**: Significant Granger causality at lag 6 $(p =0.043)$ and CCF peaks at lags 0–2.  
+– **Global → Farmgate**: High CCF at lags 0–3 but **no direct Granger effect**, indicating **indirect transmission** via retail.
 
 - **Inflation Impact**  
-  – Persistent price declines have driven **negative rice inflation** in 2025, helping to **cool headline CPI** given rice’s large weight in the food basket.
+– Persistent price declines have driven **negative rice inflation** in 2025, helping to **cool headline CPI** given rice’s large weight in the food basket.
 
 - **Import Dynamics**  
-  – Despite falling prices, **import volumes remain volatile**, with spikes in April and June 2025—suggesting policy shifts, opportunistic buying, or logistical factors outweigh pure price incentives.
+– Despite falling prices, **import volumes remain volatile**, with spikes in April and June 2025—suggesting policy shifts, opportunistic buying, or logistical factors outweigh pure price incentives.
 
 - **Stock Adjustments**  
-  – **Commercial & Household Stocks** have eased as traders and consumers release stocks in a falling‑price environment.  
-  – **Government/NFA Stocks** have been rebuilt at lower cost, stabilizing overall reserve levels.
+– **Commercial & Household Stocks** have eased as traders and consumers release stocks in a falling‑price environment.  
+– **Government/NFA Stocks** have been rebuilt at lower cost, stabilizing overall reserve levels.
 
 - **Year‑on‑Year Declines**  
-  – **Retail prices**: June 2025 are **17% lower** than June 2024.  
-  – **Farmgate prices**: June 2025 are **31% lower**, indicating **farmers absorb most of the downturn** and signaling a widening farm‑retail margin.
+– **Retail prices**: June 2025 are **17% lower** than June 2024.  
+– **Farmgate prices**: June 2025 are **31% lower**, indicating **farmers absorb most of the downturn** and signaling a widening farm‑retail margin.
 :::
 
 ## 
