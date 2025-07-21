@@ -644,13 +644,13 @@ To assess whether global rice prices impact domesteic retail and farmgate prices
 
 <!-- :::: {.fragment fragment-index="2" .tiny-text} -->
 
-:::: {.fragment .fade-in-then-out .extra-tiny-text fragment-index="2"}
+:::: {.fragment .fade-in-then-out .tiny-text fragment-index="2"}
 ### Average IPP price (Global) → Local Retail price
 
 The cross-correlation function shows that **global prices** lead doemstic retail prices by up to **4 months**, with correlations rising from lag -4 to a peak at lag 0 (0.762). The continued high correlations at positive lags (e.g., lag +1: 0.740, lag +2: 0.701) reflect the momentum and persistence of price trends — once retail prices begin adjusting to rising global import costs, they often continue moving in the same direction for several months. This suggests a gradual and sustained pass-through of international prices to domestic retail markets.
 ::::
 
-:::: {.fragment .fade-in fragment-index="3" .extra-tiny-text}
+:::: {.fragment .fade-in fragment-index="3" .tiny-text}
 :::: {.fragment .fade-out fragment-index=5}
 ### Average IPP price (Global) → Local Farmgate price
 
@@ -1403,7 +1403,7 @@ base_plot |>
 :::
 
 <!-- houseStock CCF START -->
-:::: {.fragment .fade-in fragment-index=5 .tiny-text}
+:::: {.fragment .fade-in fragment-index=5}
 
 :::: {.fragment .fade-out fragment-index=7}
 **Household Stocks influence on Retail Prices**
@@ -1591,7 +1591,7 @@ plot_ly(ccf_dfs$rprice$Household,
 <!-- ``` -->
 <!-- ::: -->
 
-<!-- <!-- houseStock CCF START --> -->
+<!-- houseStock CCF START -->
 <!-- :::: {.fragment .fade-in fragment-index=8 .tiny-text} -->
 
 <!-- :::: {.fragment .fade-out fragment-index=9} -->
