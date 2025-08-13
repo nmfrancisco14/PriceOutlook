@@ -1464,6 +1464,31 @@ granger_results |>
 
 :::::
 
+
+## Effect of Import ban on prices
+
+### Price change using elasticities and market equilibrium
+
+A simple way to estimate the price impact using supply and demand elasticities is to use the elasticity incidence formula from basic market equilibrium theory.
+
+If there’s a shift in supply or demand, the proportional change in equilibrium price can be approximated as:
+
+$$
+
+\frac{\Delta P}{P} = \frac{\% \Delta Q}{E_d -E_s}\\
+\\
+\\
+\begin{aligned}
+&Where: \\
+\\
+&\Delta P / P = \text{proportional change in price} \\
+&E_d = \text{rice price elasticity of demand} \\
+&E_s = \text{rice price elasticity of supply} \\
+\end{aligned}
+$$
+
+
+
 ## Stocks and Price {.tiny-text auto-animate="true"}
 
 <!-- StockPRICE - START -->
