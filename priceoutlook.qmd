@@ -61,6 +61,19 @@ library(daclakeapi)
 
 data <- get_all_api_data()
 
+# data <- tryCatch(
+#   {
+#     suppressMessages(
+#       suppressWarnings(
+#         get_all_api_data()
+#       )
+#     )
+#   },
+#   error = function(e) {
+#     invisible(NULL) # walang print o message
+#   }
+# )
+
 # flag_if_late <- function(date) {
 #   delay <- interval(date, Sys.Date()) %/% months(1)
 #   if (delay > 0) {
