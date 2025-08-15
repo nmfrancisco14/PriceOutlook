@@ -37,44 +37,12 @@ library(DiagrammeR)
 library(lmtest)
 library(knitr)
 library(purrr)
-
+library(daclakeapi)
 ```
 
 ```{r}
 #|label: data_fetching
 #|echo: false
-
-data_api <- function(url, key, mute_onSuccess=TRUE) {
-  response <- POST(
-    url,
-    add_headers("Content-Type" = "application/json"),
-    body = list(key = key),  # Pass the list as the body
-    encode = "json"  # Ensure the body is encoded as JSON
-  )
-  if (status_code(response) == 200) {
-    
-    if (!mute_onSuccess){
-      print("Request was successful!")
-    }
-    
-    data <- content(response, "text", encoding = "UTF-8")
-    json_data <- fromJSON(data, flatten = TRUE)
-    data_df <- as.data.frame(json_data$data)
-    
-    if (!mute_onSuccess){
-      print(head(data_df))
-    }
-    
-  } else {
-    print(paste("Request failed with status:", status_code(response)))
-    print(content(response, "text", encoding = "UTF-8"))  # Print server error message
-  }
-  
-  return(data_df)
-}
-
-#key
-key <-  "cddcc4f040befb5ecc594aa9cb926379"
 
 url_list <-  list(
   wholesale_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/wholesale_prices",
@@ -87,7 +55,7 @@ url_list <-  list(
 
 
 
-data <- lapply(url_list, function(x) data_api(x, key))
+data <- get_all_api_data()
 
 flag_if_late <- function(date) {
   delay <- interval(date, Sys.Date()) %/% months(1)
@@ -192,48 +160,39 @@ data_edited <- list()
 
 data_edited[["wholesale_prices"]] <- 
   data$wholesale_prices |> 
-  mutate(date = mdy(monthyr)) |> 
-  mutate_at(vars(wmr,rmr),as.numeric) |> 
-  select(-c(monthyr,created_at,updated_at)) |> 
+  mutate(date = mdy(data.monthyr)) |> 
+  mutate_at(vars(data.wmr,data.rmr),as.numeric) |> 
+  select(-c(data.monthyr,data.created_at,data.updated_at)) |> 
   relocate(date,.before=1) |> 
-  pivot_longer(c(wmr,rmr), names_to = 'type',values_to = 'price') |> 
+  pivot_longer(c(data.wmr,data.rmr), names_to = 'type',values_to = 'price') |> 
   arrange(date, type)
 
 data_edited[["retail_prices"]] <- 
   data$retail_prices |> 
-  mutate(date = mdy(monthyr)) |> 
-  mutate_at(vars(wmr,rmr),as.numeric) |> 
-  select(-c(monthyr,created_at,updated_at)) |> 
+  mutate(date = mdy(data.monthyr)) |> 
+  mutate_at(vars(data.wmr,data.rmr),as.numeric) |> 
+  select(-c(data.monthyr,data.created_at,data.updated_at)) |> 
   relocate(date,.before=1) |> 
-  pivot_longer(c(wmr,rmr), names_to = 'type',values_to = 'price') |> 
+  pivot_longer(c(data.wmr,data.rmr), names_to = 'type',values_to = 'price') |> 
   arrange(date, type)
 
 data_edited[["farmgate_prices"]] <- 
   data$farmgate_prices |> 
-  mutate(date = mdy(monthyr),
-         farmgate = as.numeric(farmgate),
+  mutate(date = mdy(data.monthyr),
+         farmgate = as.numeric(data.farmgate),
          farmgate_rice = farmgate/0.63) |> 
-  select(-c(monthyr,created_at,updated_at)) |> 
+  select(-c(data.farmgate,data.monthyr,data.created_at,data.updated_at)) |> 
   relocate(date,.before=1) |> 
   arrange(date)
 
-
-data_edited[["farmgate_prices"]] <- 
-  data$farmgate_prices |> 
-  mutate(date = mdy(monthyr),
-         farmgate = as.numeric(farmgate),
-         farmgate_rice = farmgate/0.63) |> 
-  select(-c(monthyr,created_at,updated_at)) |> 
-  relocate(date,.before=1) |> 
-  arrange(date)
 
 data_edited[["ipp"]] <- 
   data$fao_fob_prices |>
-  left_join(data$exrates |> select(monthyr,exrates), by="monthyr") |> 
-  mutate(date =mdy(monthyr),
-         price = as.numeric(value),
-         exrates = as.numeric(exrates)) |> 
-  select(-c(monthyr,value,created_at,updated_at)) |> 
+  left_join(data$exrates |> select(data.monthyr,data.exrates), by="data.monthyr") |> 
+  mutate(date =mdy(data.monthyr),
+         price = as.numeric(data.value),
+         exrates = as.numeric(data.exrates)) |> 
+  select(-c(data.monthyr,data.value,data.created_at,data.updated_at)) |> 
   relocate(date,.before=1) |>
   mutate(ipp = pmap_dbl(list(price,exrates),
                         function(price,exrates)
@@ -249,18 +208,24 @@ data_edited[["ipp_ave"]] <-
 pricedata_comb <-
   data_edited$ipp_ave |> 
   rename(ipp=price) |> 
-  left_join(data_edited$retail_prices |> filter(type=="rmr") |> select(date,rprice=price)) |> 
+  left_join(data_edited$retail_prices |> filter(type=="data.rmr") |> select(date,rprice=price)) |> 
   
-  left_join(data_edited$wholesale_prices |> filter(type=="rmr") |> select(date,wprice=price)) |> 
+  left_join(data_edited$wholesale_prices |> filter(type=="data.rmr") |> select(date,wprice=price)) |> 
   
   left_join(data_edited$farmgate_prices |> select(date,farmgate)) |> 
-  left_join(data_edited$ipp |> filter(type=="Vietnam 25%") |> select(date,viet_price=price)) |> 
-  left_join(data_edited$ipp |> filter(type=="Thai 25%") |> select(date,thai_price=price)) |> 
-  left_join(data_edited$ipp |> filter(type=="Pakistan 25%") |> select(date,pak_price=price)) |> 
-  left_join(data_external$imports) |> 
-  left_join(data_external$stocks |> 
-              pivot_wider(names_from=Stock,
-                          values_from=Inventory))
+  left_join(data_edited$ipp |> filter(data.type=="Vietnam 25%") |> select(date,viet_price=price)) |> 
+  left_join(data_edited$ipp |> filter(data.type=="Thai 25%") |> select(date,thai_price=price)) |> 
+  left_join(data_edited$ipp |> filter(data.type=="Pakistan 25%") |> select(date,pak_price=price)) |> 
+  left_join(data$imports |> 
+              mutate(date = mdy(monthyr)) |> 
+              select(date,imports = imports_nrp) |> 
+              add_row(date = mdy("07-01-2025"), imports ="305277.4")) |> 
+  left_join(data$totalstocks |> 
+              filter(locCode==999) |> 
+              mutate(date = ym(paste0(year,"-",month))) |> 
+              select(date,household:total)
+            ) |> 
+  mutate_at(vars(imports:total), as.numeric)
 
 pricedata_yoy <- 
   pricedata_comb |> 
@@ -277,7 +242,7 @@ pricedata_yoy <-
 base_plot <- 
   plot_ly(width="1000",height="500") |>
   add_lines(data =data_edited[["wholesale_prices"]] |> 
-              filter(type =="rmr"),
+              filter(type =="data.rmr"),
             x = ~date,
             y = ~price,
             legendgroup = "domestic prices",
@@ -287,7 +252,7 @@ base_plot <-
             line = list(color = "darkorange")
   ) |> 
   add_lines(data =data_edited[["retail_prices"]] |> 
-              filter(type =="rmr"),
+              filter(type =="data.rmr"),
             x = ~date,
             y = ~price,
             legendgroup = "domestic prices",
@@ -313,29 +278,29 @@ base_plot <-
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "black", dash = "dash")) |>
   add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Vietnam 25%"),
+              filter(data.type == "Vietnam 25%"),
             x=~date,
             y=~ipp,
             legendgroup = "global prices",
-            name = ~paste(type," IPP"),
+            name = ~paste(data.type," IPP"),
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#FF3F3F", dash = "dash")) |>
   add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Thai 25%"),
+              filter(data.type == "Thai 25%"),
             x=~date,
             y=~ipp,
             legendgroup = "global prices",
-            name = ~paste(type," IPP"),
+            name = ~paste(data.type," IPP"),
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#65DA65", dash = "dash")) |>
   add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Pakistan 25%"),
+              filter(data.type == "Pakistan 25%"),
             x=~date,
             y=~ipp,
             legendgroup = "global prices",
-            name = ~paste(type," IPP"),
+            name = ~paste(data.type," IPP"),
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#EE82EE", dash = "dash")) |>
@@ -384,17 +349,17 @@ ccf_results <- map(vars, ~ list(
 names(ccf_results) <- vars
 
 #special
-ccf_results$rprice$Imports <-  ccf(pricedata_comb$rprice, pricedata_comb$Imports, plot = FALSE, lag.max = 12)
+ccf_results$rprice$Imports <-  ccf(pricedata_comb$rprice, pricedata_comb$imports, plot = FALSE, lag.max = 12)
 
-ccf_results$rprice$Commercial <-  ccf(pricedata_comb$rprice, pricedata_comb$Commercial, plot = FALSE, lag.max = 12)
+ccf_results$rprice$Commercial <-  ccf(pricedata_comb$rprice, pricedata_comb$commercial, plot = FALSE, lag.max = 12)
 
-ccf_results$rprice$Household <-  ccf(pricedata_comb$rprice, pricedata_comb$Household, plot = FALSE, lag.max = 12)
+ccf_results$rprice$Household <-  ccf(pricedata_comb$rprice, pricedata_comb$household, plot = FALSE, lag.max = 12)
 
-ccf_results$rprice$NFA <-  ccf(pricedata_comb$rprice, pricedata_comb$NFA, plot = FALSE, lag.max = 12)
+ccf_results$rprice$NFA <-  ccf(pricedata_comb$rprice, pricedata_comb$nfa, plot = FALSE, lag.max = 12)
 
-ccf_results$rprice$Total <-  ccf(pricedata_comb$rprice, pricedata_comb$Total, plot = FALSE, lag.max = 12)
+ccf_results$rprice$Total <-  ccf(pricedata_comb$rprice, pricedata_comb$total, plot = FALSE, lag.max = 12)
 
-ccf_results$ipp$Imports <-  ccf(pricedata_comb$ipp, pricedata_comb$Imports, plot = FALSE, lag.max = 12)
+ccf_results$ipp$Imports <-  ccf(pricedata_comb$ipp, pricedata_comb$imports, plot = FALSE, lag.max = 12)
 
 
 
