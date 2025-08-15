@@ -65,14 +65,14 @@ flag_if_late <- function(date) {
     as.character(date)
   }
 }
-
-mostrecentdate_api <- lapply(data, function(x) x |> 
-                               slice_max(order_by = id) |> 
-                               pull(monthyr) |> 
-                               as.Date("%m/%d/%Y")
-)
-mostrecentdate_api_flagged <- lapply(mostrecentdate_api,flag_if_late)
-data_external <- list()
+# 
+# mostrecentdate_api <- lapply(data, function(x) x |> 
+#                                slice_max(order_by = id) |> 
+#                                pull(monthyr) |> 
+#                                as.Date("%m/%d/%Y")
+# )
+# mostrecentdate_api_flagged <- lapply(mostrecentdate_api,flag_if_late)
+# data_external <- list()
 
 
 # data_external[["stocks"]] <-  read_csv("external_data/stocks.csv") |>
@@ -92,6 +92,10 @@ data_external <- list()
 # 
 # saveRDS(data_external[["riceinf"]],"external_data/riceinflation.rds")
 
+
+data_external <- list()
+data_external[["riceinf"]] <- readRDS("external_data/riceinflation.rds")
+
 # data_external[["imports"]] <-  read_csv("external_data/imports.csv") |>
 #   mutate(mth = match(Month,month.abb),
 #          date = ymd(paste(Year,mth,"01"))) |>
@@ -101,38 +105,38 @@ data_external <- list()
 # saveRDS(data_external[["imports"]] ,"external_data/imports.rds")
 
 
-data_external[["riceinf"]] <- readRDS("external_data/riceinflation.rds")
-
-
-data_external[["stocks"]] <- readRDS("external_data/stocks.rds")
-
-data_external[["imports"]] <- readRDS("external_data/imports.rds")
-
-update_msg <- 
-  paste("Most recent DATA as of: ", Sys.Date(),
-        "\nFROM DATA LAKE APIs",
-        "\n--1. PSA Wholesale Prices: ", mostrecentdate_api_flagged$wholesale_prices,
-        "\n--2. PSA Retail Prices: ", mostrecentdate_api_flagged$retail_prices,
-        "\n--3. FAO FOB prices: ", mostrecentdate_api_flagged$fao_fob_prices,
-        "\n--4. VFA FOB prices: ", mostrecentdate_api_flagged$vfa_fob_prices,
-        "\n--5. BSP Exchnge rates: ", mostrecentdate_api_flagged$exrates,
-        "\n--6. PSA Farmgate Prices: ", mostrecentdate_api_flagged$farmgate_prices,
-        "\n\n",
-        "FROM app local files",
-        "\n--1. PSA rice total stocks: ", flag_if_late(data_external[["stocks"]] |> 
-                                                         filter(Stock=="Total") |> na.omit() |> slice_max(order_by = date) |> pull(date)),
-        "\n--2. PSA rice inflation: ",
-        flag_if_late(data_external[["riceinf"]] |>
-                       slice_max(order_by = date) |> pull(date)),
-        "\n--3. PSA/BOC Imports: ",
-        flag_if_late(data_external[["imports"]] |>
-                       slice_max(order_by = date) |> pull(date)),
-        
-        "\n\n* Each asterisk (*) indicates the data is late by one month."
-        
-  )
-
-message(update_msg)
+# data_external[["riceinf"]] <- readRDS("external_data/riceinflation.rds")
+# 
+# 
+# data_external[["stocks"]] <- readRDS("external_data/stocks.rds")
+# 
+# data_external[["imports"]] <- readRDS("external_data/imports.rds")
+# 
+# update_msg <- 
+#   paste("Most recent DATA as of: ", Sys.Date(),
+#         "\nFROM DATA LAKE APIs",
+#         "\n--1. PSA Wholesale Prices: ", mostrecentdate_api_flagged$wholesale_prices,
+#         "\n--2. PSA Retail Prices: ", mostrecentdate_api_flagged$retail_prices,
+#         "\n--3. FAO FOB prices: ", mostrecentdate_api_flagged$fao_fob_prices,
+#         "\n--4. VFA FOB prices: ", mostrecentdate_api_flagged$vfa_fob_prices,
+#         "\n--5. BSP Exchnge rates: ", mostrecentdate_api_flagged$exrates,
+#         "\n--6. PSA Farmgate Prices: ", mostrecentdate_api_flagged$farmgate_prices,
+#         "\n\n",
+#         "FROM app local files",
+#         "\n--1. PSA rice total stocks: ", flag_if_late(data_external[["stocks"]] |> 
+#                                                          filter(Stock=="Total") |> na.omit() |> slice_max(order_by = date) |> pull(date)),
+#         "\n--2. PSA rice inflation: ",
+#         flag_if_late(data_external[["riceinf"]] |>
+#                        slice_max(order_by = date) |> pull(date)),
+#         "\n--3. PSA/BOC Imports: ",
+#         flag_if_late(data_external[["imports"]] |>
+#                        slice_max(order_by = date) |> pull(date)),
+#         
+#         "\n\n* Each asterisk (*) indicates the data is late by one month."
+#         
+#   )
+# 
+# message(update_msg)
 ```
 
 ```{r}
@@ -410,7 +414,7 @@ vars <- setdiff(names(pricedata_comb), c("date", "farmgate"))
 
 granger_results <- expand_grid(
   variable = vars,
-  target = c("rprice", "farmgate", "Imports"),
+  target = c("rprice", "farmgate", "imports"),
   lag = 2:12
 ) |> 
   filter(!(variable==target)) |> 
@@ -632,7 +636,7 @@ plot_ly(width="1000",height="500") |>
            )
   ) |> 
   add_lines(data =data_edited[["wholesale_prices"]] |> 
-              filter(type =="rmr"),
+              filter(type =='data.rmr'),
             x = ~date,
             y = ~price, yaxis="y2",
             legendgroup = "domestic prices",
@@ -642,7 +646,7 @@ plot_ly(width="1000",height="500") |>
             line = list(color = "darkorange")
   ) |> 
   add_lines(data =data_edited[["retail_prices"]] |> 
-              filter(type =="rmr"),
+              filter(type =='data.rmr'),
             x = ~date,
             y = ~price, yaxis="y2",
             legendgroup = "domestic prices",
@@ -668,29 +672,29 @@ plot_ly(width="1000",height="500") |>
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "black", dash = "dash")) |>
   add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Vietnam 25%"),
+              filter(data.type == "Vietnam 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
-            name = ~paste(type," IPP"),
+            name = ~paste(data.type," IPP"),
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#FF3F3F", dash = "dash")) |>
   add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Thai 25%"),
+              filter(data.type == "Thai 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
-            name = ~paste(type," IPP"),
+            name = ~paste(data.type," IPP"),
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#65DA65", dash = "dash")) |>
   add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Pakistan 25%"),
+              filter(data.type == "Pakistan 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
-            name = ~paste(type," IPP"),
+            name = ~paste(data.type," IPP"),
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#EE82EE", dash = "dash")) |>
@@ -755,7 +759,7 @@ plot_ly(width="1000",height="500") |>
            )
   ) |> 
   add_lines(data =data_edited[["wholesale_prices"]] |> 
-              filter(type =="rmr"),
+              filter(type =='data.rmr'),
             x = ~date,
             y = ~price, yaxis="y2",
             legendgroup = "domestic prices",
@@ -765,7 +769,7 @@ plot_ly(width="1000",height="500") |>
             line = list(color = "darkorange")
   ) |> 
   add_lines(data =data_edited[["retail_prices"]] |> 
-              filter(type =="rmr"),
+              filter(type =='data.rmr'),
             x = ~date,
             y = ~price, yaxis="y2",
             legendgroup = "domestic prices",
@@ -791,29 +795,29 @@ plot_ly(width="1000",height="500") |>
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "black", dash = "dash")) |>
   add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Vietnam 25%"),
+              filter(data.type == "Vietnam 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
-            name = ~paste(type," IPP"),
+            name = ~paste(data.type," IPP"),
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#FF3F3F", dash = "dash")) |>
   add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Thai 25%"),
+              filter(data.type == "Thai 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
-            name = ~paste(type," IPP"),
+            name = ~paste(data.type," IPP"),
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#65DA65", dash = "dash")) |>
   add_lines(data =data_edited[["ipp"]] |> 
-              filter(type == "Pakistan 25%"),
+              filter(data.type == "Pakistan 25%"),
             x=~date,
             y=~ipp, yaxis="y2",
             legendgroup = "global prices",
-            name = ~paste(type," IPP"),
+            name = ~paste(data.type," IPP"),
             hovertemplate = paste0("%{fullData.name}: ",
                                    "₱ %{y:.2f}<extra></extra>"), 
             line = list(color = "#EE82EE", dash = "dash")) |>
@@ -1225,10 +1229,9 @@ Since early 2025, both global rice prices and domestic retail and farmgate price
 #| label: imports_trends
 #| echo: false
 base_plot |> 
-  add_lines(data = data_external[["imports"]] |> 
-              filter(date>=ymd("2016-01-01")),
+  add_lines(data = pricedata_yoy, 
             x=~date,
-            y=~Imports,
+            y=~imports,
             name = "Rice imports",
             line = list(color = "#fbbb18", width = 1),
             fill = "tozeroy",
@@ -1280,7 +1283,7 @@ In this case, the **Granger causality test does not confirm a statistically sign
 #| label: imports_effect
 #| echo: false
 
-plot_ly(ccf_dfs$Imports$rprice,
+plot_ly(ccf_dfs$imports$rprice,
         x = ~Lag,
         y = ~Correlation,
         type = "bar",
@@ -1402,7 +1405,7 @@ plot_ly(ccf_dfs$rprice$Imports,
 #| echo: false
 
 granger_results |>
-  filter(variable=="rprice" & target=="Imports") |>
+  filter(variable=="rprice" & target=="imports") |>
   select(lag,p.value) |>
   mutate(lag = as.character(round(lag)),
          p.value = ifelse(p.value < 0.001, "<0.001", sprintf("%.4f", p.value))
@@ -1475,21 +1478,22 @@ With both global and domestic rice prices on a general downward trend for the pa
 #| label: comStocks
 #| echo: false
 base_plot |> 
-  add_lines(data = data_external[["stocks"]] |> 
-              filter(date>=ymd("2016-01-01"),
-                     Stock == "Commercial"),
+  add_lines(data = pricedata_yoy,
+              # data_external[["stocks"]] |> 
+              # filter(date>=ymd("2016-01-01"),
+              #        Stock == "Commercial"),
             x=~date,
-            y=~Inventory,
-            name = ~Stock,
+            y=~commercial,
+            name = "commercial Stocks",
             # color = ~Stock,
-            customdata = ~Stock,
+            # customdata = ~Stock,
             # fillcolor = ~Stock,
             line = list(color = "#fbbb18", width = 1),
             fill = "tozeroy",
             fillcolor = "rgba(254, 234, 22,0.3)",
             yaxis="y2",
             hovertemplate = paste0(
-              "%{customdata} Stocks: ",
+              "Commercial Stocks: ",
               "%{y:,.2f} mt<extra></extra>"
             )
   ) |> 
@@ -1524,11 +1528,11 @@ The cross-correlation between commercial stocks and domestic rice prices reveals
 
 
 
-plot_ly(ccf_dfs$Commercial$rprice,
+plot_ly(ccf_dfs$commercial$rprice,
         x = ~Lag,
         y = ~Correlation,
         type = "bar",
-        name = "CCF: Imports on Retail",
+        name = "CCF: Commercial Stocks on Retail",
         width = 1000,
         height = 400) |>
   layout(xaxis = list(title = "Lag (Months)"),
@@ -1665,21 +1669,22 @@ Gradually decreasing rice prices led to stable or slightly declining household s
 #| echo: false
 
 base_plot |>
-  add_lines(data = data_external[["stocks"]] |>
-              filter(date>=ymd("2016-01-01"),
-                     Stock == "Household"),
+  add_lines(data = pricedata_yoy,
+              # data_external[["stocks"]] |>
+              # filter(date>=ymd("2016-01-01"),
+              #        Stock == "Household"),
             x=~date,
-            y=~Inventory,
-            name = ~Stock,
+            y=~household,
+            name = "Household Stocks",
             # color = ~Stock,
-            customdata = ~Stock,
+            # customdata = ~Stock,
             # fillcolor = ~Stock,
             line = list(color = "#fbbb18", width = 1),
             fill = "tozeroy",
             fillcolor = "rgba(254, 234, 22,0.3)",
             yaxis="y2",
             hovertemplate = paste0(
-              "%{customdata} Stocks: ",
+              "Household Stocks: ",
               "%{y:,.2f} mt<extra></extra>"
             )
   ) |>
@@ -1715,7 +1720,7 @@ base_plot |>
 #| label: ccf_houseStocks_rprice
 #| echo: false
 
-plot_ly(ccf_dfs$Household$rprice,
+plot_ly(ccf_dfs$household$rprice,
         x = ~Lag,
         y = ~Correlation,
         type = "bar",
@@ -2161,7 +2166,7 @@ Since the start of 2025, declining global and local rice prices have contributed
 #| label: inflation
 #| echo: false
 base_plot |> 
-  add_lines(data = data_external[["riceinf"]] |> 
+  add_lines(data = data_external[["riceinf"]] |>
               filter(date>=ymd("2016-01-01")),
             x=~date,
             y=~Rice,
