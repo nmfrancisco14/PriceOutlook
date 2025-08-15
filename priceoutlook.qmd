@@ -479,6 +479,7 @@ base_plot |>
   plotly::config(displayModeBar = FALSE)
 
 ```
+
 :::
 
 ::: {.fragment fragment-index="2"}
@@ -491,6 +492,7 @@ base_plot |>
   plotly::config(displayModeBar = FALSE)
 
 ```
+
 :::
 
 ::: {.fragment .fade-in fragment-index="3"}
@@ -530,6 +532,7 @@ spike_plot |>
   plotly::config(displayModeBar = FALSE)
 
 ```
+
 :::
 
 ::: {.fragment .fade-in fragment-index="4"}
@@ -600,6 +603,7 @@ lag_plot |>
   plotly::config(displayModeBar = FALSE)
 
 ```
+
 :::
 ::::
 
@@ -730,6 +734,7 @@ plot_ly(width="1000",height="500") |>
 
 
 ```
+
 :::
 
 
@@ -907,6 +912,7 @@ plot_ly(width="1000",height="500") |>
 
 
 ```
+
 :::
 ::::
 
@@ -1051,6 +1057,7 @@ plot_ly(ccf_dfs$ipp$rprice,
   ) |> 
   plotly::config(displayModeBar = FALSE)
 ```
+
 :::
 ::::
 
@@ -1104,6 +1111,7 @@ plot_ly(ccf_dfs$ipp$fprice,
 
 
 ```
+
 ::::
 ::::
 
@@ -1159,6 +1167,7 @@ plot_ly(ccf_dfs$rprice$fprice,
 
 
 ```
+
 ::::
 
 :::: {.fragment .fade-in .tiny-text fragment-index="6"}
@@ -1216,39 +1225,37 @@ B -> C [label="Lag 0–10 months", color="steelblue"]
 }
 
 ```
+
 ::::
 :::::
 
-## Imports and Prices {.tiny-text auto-animate="true"}
 
-::::: {.r-stack}
 
-:::: {.fragment .fade-out .tiny-text fragment-index="1"}
+## Effect on Rice Inflation {.tiny-text auto-animate="true"}
 
-### Current trends
-
-Since early 2025, both global rice prices and domestic retail and farmgate prices in the Philippines have been on a gradual downward trend, yet **import volumes have remained erratic rather than steadily rising**. Import volume have oscillated, with **notable spikes in April and June**. This suggests imports reacting to non-price related factors influencing trade dynamics such as opportunistic buying when import parity margins widened; shifts in government import policies; traders and authorities adjusting to fluctuating demand forecasts or logistical bottlenecks.
+Since the start of 2025, declining global and local rice prices have contributed to negative rice inflation, easing upward pressure on overall prices. Given rice's high weight in the consumer basket, this drop has significantly helped slow down headline inflation.
 
 ```{r}
-#| label: imports_trends
+#| label: inflation
 #| echo: false
 base_plot |> 
-  add_lines(data = pricedata_yoy, 
+  add_lines(data = data_external[["riceinf"]] |>
+              filter(date>=ymd("2016-01-01")),
             x=~date,
-            y=~imports,
-            name = "Rice imports",
+            y=~Rice,
+            name = "Rice inflation rate",
             line = list(color = "#fbbb18", width = 1),
             fill = "tozeroy",
             fillcolor = "rgba(254, 234, 22,0.3)",
             yaxis="y2",
             hovertemplate = paste0(
-              "Rice imports: ",
-              "%{y:,.2f} mt<extra></extra>"
+              "Rice Inflation: ",
+              "%{y:,.2f} %<extra></extra>"
             )
   ) |> 
   layout(
     xaxis=list(range = c("2023-06-01", "2025-06-01")),
-    yaxis2 = list(title = "Rice imports (mt)", 
+    yaxis2 = list(title = "Rice Inflation (%)", 
                   overlaying = "y",
                   side = "right", 
                   showgrid = FALSE,
@@ -1258,208 +1265,9 @@ base_plot |>
     margin = list(l = 50, r = 50, t = 50, b = 50)
   )
 
-
-```
-::::
-
-:::: {.fragment .fade-in fragment-index=1 .tiny-text}
-:::: {.fragment .fade-out fragment-index=3}
-
-### Import influence on Local Retail price
-
-:::: {.r-stack}
-
-::: {.fragment .fade-out fragment-index=2}
-The CCF shows positive correlations between import volume and retail prices from **lags -4 to +3**, indicating that increases in imports tend to coincide with, or slightly lead, increases in retail prices — particularly within the same month or the next 1–2 months.
-
-While higher import volumes are typically expected to lower retail prices by increasing supply, the **observed pattern suggests the opposite**. This may point to **reverse causality**: rather than imports driving retail prices, rising retail prices may be prompting an increase in imports. In other words, the market may be responding to higher prices by importing more to stabilize supply.
-:::
-
-::: {.fragment .fade-in-then-out fragment-index=2}
-However, it is important to note that the **CCF only measures correlation**, not causality. To determine whether import volume actually causes changes in retail prices, a Granger causality test is needed to formally assess the direction of influence.
-
-In this case, the **Granger causality test does not confirm a statistically significant causal effect**, suggesting that while import volume and retail prices are correlated, imports may not consistently provide additional predictive value beyond the existing patterns in domestic retail prices. This does not necessarily mean that imports have no impact—**it may indicate that their influence is delayed, indirect, or overshadowed by other, stronger domestic factors driving retail price behavior.**
-:::
-::::
-
-
-```{r}
-#| label: imports_effect
-#| echo: false
-
-plot_ly(ccf_dfs$imports$rprice,
-        x = ~Lag,
-        y = ~Correlation,
-        type = "bar",
-        name = "CCF: Imports on Retail",
-        width = 1000,
-        height = 400) |>
-  layout(xaxis = list(title = "Lag (Months)"),
-         yaxis = list(title = "Cross-Correlation"),
-         shapes = list(
-
-           #confidence bands
-           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
-                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
-           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
-                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
-
-           #leads
-           list(type = "rect",
-                x0 = -4, x1 = 0,
-                y0 = 0, y1 = 1,
-                fillcolor = "rgba(0, 128, 0, 0.2)",
-                line = list(width = 0)),
-
-           #lag momentums
-
-           list(type = "rect",
-                x0 = 1, x1 = 3,
-                y0 = 0, y1 = 1,
-                fillcolor = "rgba(0, 0, 255, 0.2)",
-                line = list(width = 0))
-
-         ),
-
-         annotations = list(
-           list(x = -2, y = 0.8, text = "Import volume influence<br>(Lead)", showarrow = FALSE,
-                font = list(color = "green", size = 12)),
-           list(x = 2, y = 0.8, text = "Retail price <br> response (Lag)", showarrow = FALSE,
-                font = list(color = "blue", size = 12))
-         )
-
-  ) |>
-  plotly::config(displayModeBar = FALSE)
-
 ```
 
-::::
-::::
 
-:::: {.fragment .fade-in fragment-index=3}
-:::: {.fragment .fade-out fragment-index=5}
-
-###  Local retail price influence on Imports
-
-:::: {.r-stack .tiny-text}
-
-::: {.fragment .fade-out fragment-index=4}
-This CCF indicates that it is actually the domestic retail prices that leads import volume (**0-3 months**). After peak, the effect on import volume persists for up to **4 months**.
-
-This highlights a **reactive import strategy** where traders and policymakers may respond  to rising domestic prices by increasing imports to stabilize supply and mitigate further price hikes.
-
-```{r}
-#| label: rprice_Importeffect
-#| echo: false
-
-plot_ly(ccf_dfs$rprice$Imports,
-        x = ~Lag,
-        y = ~Correlation,
-        type = "bar",
-        name = "CCF: Retail on Imports",
-        width = 1000,
-        height = 400) |>
-  layout(xaxis = list(title = "Lag (Months)"),
-         yaxis = list(title = "Cross-Correlation"),
-         shapes = list(
-
-           #confidence bands
-           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
-                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
-           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
-                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
-
-           #leads
-           list(type = "rect",
-                x0 = -3, x1 = 0,
-                y0 = 0, y1 = 1,
-                fillcolor = "rgba(0, 128, 0, 0.2)",
-                line = list(width = 0)),
-
-           #lag momentums
-
-           list(type = "rect",
-                x0 = 1, x1 = 4,
-                y0 = 0, y1 = 1,
-                fillcolor = "rgba(0, 0, 255, 0.2)",
-                line = list(width = 0))
-
-         ),
-
-         annotations = list(
-           list(x = -1.5, y = 0.8, text = "Retail price influence<br>(Lead)", showarrow = FALSE,
-                font = list(color = "green", size = 12)),
-           list(x = 2.5, y = 0.8, text = "Import volume <br> response (Lag)", showarrow = FALSE,
-                font = list(color = "blue", size = 12))
-         )
-
-  ) |>
-  plotly::config(displayModeBar = FALSE)
-
-```
-
-:::
-
-::: {.fragment .fade-in fragment-index=4}
-
-**Granger causality test** confirms this relationship suggesting that domestic retail prices Granger-cause import volumes with significant effect from lags 2-12. This means domestic retail prices as far as 12 months ago has influence on current import volumes
-
-```{r}
-#| label:  rprice_Imports
-#| echo: false
-
-granger_results |>
-  filter(variable=="rprice" & target=="imports") |>
-  select(lag,p.value) |>
-  mutate(lag = as.character(round(lag)),
-         p.value = ifelse(p.value < 0.001, "<0.001", sprintf("%.4f", p.value))
-         )|> 
-  t() |> 
-  as.data.frame() |> 
-  # 
-  # pivot_wider(names_from = lag,values_from=p.value) |> 
-  # mutate(row = "p.value") |> 
-  # bind_rows(tibble(row = 'lag',
-  #                  
-  #           )
-  kable(format= "markdown",
-        col.names = NULL,
-      caption = "Table. Granger Causality Summary table on domestic rice prices influencing Import volumes")
-
-```
-:::
-
-::::
-
-::::
-::::
-
-:::::
-
-
-## Effect of Import ban on prices
-
-### Price change using elasticities and market equilibrium {.tiny-text}
-
-::: {.extra-tiny-text}
-A simple way to estimate the price impact using supply and demand elasticities is to use the elasticity incidence formula from basic market equilibrium theory.
-
-If there’s a shift in supply or demand, the proportional change in equilibrium price can be approximated as:
-
-
-$$
-\frac{\Delta P}{P} = \frac{\% \Delta Q}{E_d -E_s}\\
-\\
-\\
-\begin{aligned}
-&Where: \\
-\\
-&\Delta P / P = \text{proportional change in price} \\
-&E_d = \text{rice price elasticity of demand} \\
-&E_s = \text{rice price elasticity of supply} \\
-\end{aligned}
-$$
-:::
 
 
 
@@ -1517,6 +1325,7 @@ base_plot |>
 
 
 ```
+
 :::
 
 :::: {.fragment .fade-in fragment-index=2 .tiny-text}
@@ -1639,6 +1448,7 @@ plot_ly(ccf_dfs$rprice$Commercial,
   plotly::config(displayModeBar = FALSE)
 
 ```
+
 :::
 ::::
 
@@ -1708,6 +1518,7 @@ base_plot |>
 
 
 ```
+
 :::
 
 <!-- houseStock CCF START -->
@@ -2028,12 +1839,12 @@ plot_ly(ccf_dfs$rprice$Household,
 
 ::::
 <!-- HouseStack-rstack - END -->
-:::::
-:::::
+<!-- ::::: -->
+<!-- ::::: -->
 <!-- HouseStock-title-END -->
 
 
-::::::
+<!-- :::::: -->
 <!-- StockPRICE - END -->
 
 
@@ -2162,33 +1973,36 @@ plot_ly(ccf_dfs$rprice$Household,
 
 
 
+## Imports and Prices {.tiny-text auto-animate="true"}
 
+::::: {.r-stack}
 
-## Effect on Rice Inflation {.tiny-text auto-animate="true"}
+:::: {.fragment .fade-out .tiny-text fragment-index="1"}
 
-Since the start of 2025, declining global and local rice prices have contributed to negative rice inflation, easing upward pressure on overall prices. Given rice's high weight in the consumer basket, this drop has significantly helped slow down headline inflation.
+### Current trends
+
+Since early 2025, both global rice prices and domestic retail and farmgate prices in the Philippines have been on a gradual downward trend, yet **import volumes have remained erratic rather than steadily rising**. Import volume have oscillated, with **notable spikes in April and June**. This suggests imports reacting to non-price related factors influencing trade dynamics such as opportunistic buying when import parity margins widened; shifts in government import policies; traders and authorities adjusting to fluctuating demand forecasts or logistical bottlenecks.
 
 ```{r}
-#| label: inflation
+#| label: imports_trends
 #| echo: false
 base_plot |> 
-  add_lines(data = data_external[["riceinf"]] |>
-              filter(date>=ymd("2016-01-01")),
+  add_lines(data = pricedata_yoy, 
             x=~date,
-            y=~Rice,
-            name = "Rice inflation rate",
+            y=~imports,
+            name = "Rice imports",
             line = list(color = "#fbbb18", width = 1),
             fill = "tozeroy",
             fillcolor = "rgba(254, 234, 22,0.3)",
             yaxis="y2",
             hovertemplate = paste0(
-              "Rice Inflation: ",
-              "%{y:,.2f} %<extra></extra>"
+              "Rice imports: ",
+              "%{y:,.2f} mt<extra></extra>"
             )
   ) |> 
   layout(
     xaxis=list(range = c("2023-06-01", "2025-06-01")),
-    yaxis2 = list(title = "Rice Inflation (%)", 
+    yaxis2 = list(title = "Rice imports (mt)", 
                   overlaying = "y",
                   side = "right", 
                   showgrid = FALSE,
@@ -2198,10 +2012,317 @@ base_plot |>
     margin = list(l = 50, r = 50, t = 50, b = 50)
   )
 
+
 ```
 
+::::
+
+:::: {.fragment .fade-in fragment-index=1 .tiny-text}
+:::: {.fragment .fade-out fragment-index=3}
+
+### Import influence on Local Retail price
+
+:::: {.r-stack}
+
+::: {.fragment .fade-out fragment-index=2}
+The CCF shows positive correlations between import volume and retail prices from **lags -4 to +3**, indicating that increases in imports tend to coincide with, or slightly lead, increases in retail prices — particularly within the same month or the next 1–2 months.
+
+While higher import volumes are typically expected to lower retail prices by increasing supply, the **observed pattern suggests the opposite**. This may point to **reverse causality**: rather than imports driving retail prices, rising retail prices may be prompting an increase in imports. In other words, the market may be responding to higher prices by importing more to stabilize supply.
+:::
+
+::: {.fragment .fade-in-then-out fragment-index=2}
+However, it is important to note that the **CCF only measures correlation**, not causality. To determine whether import volume actually causes changes in retail prices, a Granger causality test is needed to formally assess the direction of influence.
+
+In this case, the **Granger causality test does not confirm a statistically significant causal effect**, suggesting that while import volume and retail prices are correlated, imports may not consistently provide additional predictive value beyond the existing patterns in domestic retail prices. This does not necessarily mean that imports have no impact—**it may indicate that their influence is delayed, indirect, or overshadowed by other, stronger domestic factors driving retail price behavior.**
+:::
+::::
 
 
+```{r}
+#| label: imports_effect
+#| echo: false
+
+plot_ly(ccf_dfs$imports$rprice,
+        x = ~Lag,
+        y = ~Correlation,
+        type = "bar",
+        name = "CCF: Imports on Retail",
+        width = 1000,
+        height = 400) |>
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+
+           #confidence bands
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+
+           #leads
+           list(type = "rect",
+                x0 = -4, x1 = 0,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+
+           #lag momentums
+
+           list(type = "rect",
+                x0 = 1, x1 = 3,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+
+         ),
+
+         annotations = list(
+           list(x = -2, y = 0.8, text = "Import volume influence<br>(Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 2, y = 0.8, text = "Retail price <br> response (Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+
+  ) |>
+  plotly::config(displayModeBar = FALSE)
+
+```
+
+::::
+::::
+
+:::: {.fragment .fade-in fragment-index=3}
+:::: {.fragment .fade-out fragment-index=5}
+
+###  Local retail price influence on Imports
+
+:::: {.r-stack .tiny-text}
+
+::: {.fragment .fade-out fragment-index=4}
+This CCF indicates that it is actually the domestic retail prices that leads import volume (**0-3 months**). After peak, the effect on import volume persists for up to **4 months**.
+
+This highlights a **reactive import strategy** where traders and policymakers may respond  to rising domestic prices by increasing imports to stabilize supply and mitigate further price hikes.
+
+```{r}
+#| label: rprice_Importeffect
+#| echo: false
+
+plot_ly(ccf_dfs$rprice$Imports,
+        x = ~Lag,
+        y = ~Correlation,
+        type = "bar",
+        name = "CCF: Retail on Imports",
+        width = 1000,
+        height = 400) |>
+  layout(xaxis = list(title = "Lag (Months)"),
+         yaxis = list(title = "Cross-Correlation"),
+         shapes = list(
+
+           #confidence bands
+           list(type = "line",x0 = 0,x1=1,xref='paper', y0 = 2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = 2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+           list(type = "line", x0 = 0,x1=1,xref='paper', y0 = -2 / sqrt(length(pricedata_comb$ipp)),
+                y1 = -2 / sqrt(length(pricedata_comb$ipp)), line = list(dash = "dash", color = "red")),
+
+           #leads
+           list(type = "rect",
+                x0 = -3, x1 = 0,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 128, 0, 0.2)",
+                line = list(width = 0)),
+
+           #lag momentums
+
+           list(type = "rect",
+                x0 = 1, x1 = 4,
+                y0 = 0, y1 = 1,
+                fillcolor = "rgba(0, 0, 255, 0.2)",
+                line = list(width = 0))
+
+         ),
+
+         annotations = list(
+           list(x = -1.5, y = 0.8, text = "Retail price influence<br>(Lead)", showarrow = FALSE,
+                font = list(color = "green", size = 12)),
+           list(x = 2.5, y = 0.8, text = "Import volume <br> response (Lag)", showarrow = FALSE,
+                font = list(color = "blue", size = 12))
+         )
+
+  ) |>
+  plotly::config(displayModeBar = FALSE)
+
+```
+
+:::
+
+::: {.fragment .fade-in fragment-index=4}
+
+**Granger causality test** confirms this relationship suggesting that domestic retail prices Granger-cause import volumes with significant effect from lags 2-12. This means domestic retail prices as far as 12 months ago has influence on current import volumes
+
+```{r}
+#| label:  rprice_Imports
+#| echo: false
+
+granger_results |>
+  filter(variable=="rprice" & target=="imports") |>
+  select(lag,p.value) |>
+  mutate(lag = as.character(round(lag)),
+         p.value = ifelse(p.value < 0.001, "<0.001", sprintf("%.4f", p.value))
+         )|> 
+  t() |> 
+  as.data.frame() |> 
+  # 
+  # pivot_wider(names_from = lag,values_from=p.value) |> 
+  # mutate(row = "p.value") |> 
+  # bind_rows(tibble(row = 'lag',
+  #                  
+  #           )
+  kable(format= "markdown",
+        col.names = NULL,
+      caption = "Table. Granger Causality Summary table on domestic rice prices influencing Import volumes")
+
+```
+
+:::
+
+::::
+
+::::
+::::
+
+:::::
+
+
+## Effect of Import ban on prices
+
+### Price change using elasticities and market equilibrium {.tiny-text}
+
+::: {.extra-tiny-text}
+A simple way to estimate the price impact using supply and demand elasticities is to use the elasticity incidence formula from basic market equilibrium theory.
+
+If there’s a shift in supply or demand, the proportional change in equilibrium price can be approximated as:
+
+
+$$
+\frac{\Delta P}{P} = \frac{\% \Delta Q}{E_d -E_s}\\
+\\
+\\
+\begin{aligned}
+&Where: \\
+\\
+&\Delta P / P = \text{proportional change in price} \\
+&E_d = \text{rice price elasticity of demand} \\
+&E_s = \text{rice price elasticity of supply} \\
+\end{aligned}
+$$
+:::
+
+---
+
+### Estimated Effect of 2-month Import Ban
+
+::: {.extra-tiny-text}
+The effect of a **2-month import ban** on rice, based on the elasticity-incidence computation, is projected to cause an **increase of 5% to 15%** in both **farmgate** and **rice retail** prices, **assuming total transmission** of retail price changes to farmgate prices.
+
+```{r}
+#| label:  import_ban
+#| echo: false
+
+library(gt)
+
+percent_ban <- 
+data$pay_psa |> 
+  filter(locCode==999,year>=2018,eco==2) |> 
+  arrange(year) |> 
+  dplyr::select(year,prod = estProduction) |> 
+  mutate(riceProd = as.numeric(prod)*0.63,
+         yr = as.numeric(year)) |> 
+  dplyr::select(yr,riceProd) |> 
+  left_join(
+    data$imports |> 
+      mutate(date = mdy(monthyr)) |> 
+      dplyr::select(date,imports=imports_nrp) |> 
+      mutate(mth = month(date),
+             yr = year(date),
+             ban_mths = if_else(mth %in% c(9,10), 1,0),
+             imports = as.numeric(imports)) |> 
+      group_by(yr,ban_mths) |>
+      # group_by(yr) |> 
+      summarise(imports = sum(imports,na.rm = T)) |> 
+      filter(ban_mths==1) |>
+      dplyr::select(-ban_mths)
+  ) |> 
+  mutate(perc = imports/riceProd) |> 
+  ungroup() |> 
+  summarise(perc = mean(perc,na.rm = T)) |> 
+  pull()
+
+
+demand_elasticity <- 
+  list(
+    KQCustodio2011  = -0.5046,
+    MIBellezas2020 =  -0.585,
+    # trajectories2023 = -0.0729,
+    # NLNojor2023com = -0.071,
+    NLNojor2023uncom = -0.88865,
+    DDawe = -0.3)
+
+
+supply_elasticity  <- 
+  list(
+    JEHinlo2002 = .0471,
+    Trajectories2023_farmArea = 0.1818,
+    Trajectories2023_retailImp = 1.0929
+  )
+
+PriceImpact <- function(shock,ed,es,shock_type = c("demand","supply")){
+  if(shock_type =="demand"){
+    shock/(ed-es)
+  } else {
+    shock/(es-ed)
+  }
+}
+
+baseprice <- 41.31
+
+newprice <- 
+data.frame(
+  rice_form = c("Milled rice","Dry palay"),
+  price_date = c("July 2025","June 2025"),
+  price = c(41.31,16.99),
+  supplyshock = -percent_ban*100
+) |> 
+  expand_grid(
+    data.frame(
+      source = names(demand_elasticity),
+      demand_elas =unlist(demand_elasticity,use.names=FALSE)
+      )
+  ) |> 
+  mutate(pricechange = PriceImpact(-percent_ban, demand_elas,0, shock_type ="demand"),
+         newprice = if_else(rice_form =="milled rice",
+                            price*(1+pricechange),
+                            ((price/0.63)*(1+pricechange))*0.63),
+         pricegap = newprice - price
+  ) |> 
+  rename(Form = rice_form, 
+         Date = price_date,
+         Price = price,
+         `Supply shock` = supplyshock,
+         Source = source,
+         `Demand elasticity` = demand_elas,
+         `Change in price` = pricechange,
+         `New price` = newprice,
+         `Price gap` = pricegap) |> 
+  mutate(across(where(is.numeric), ~ round(.,3)))
+
+
+  kable(newprice, format = "markdown", caption = "Table. Estimated Price Impact of a 2-Month Rice Import Ban") 
+
+
+
+```
+
+:::
 
 
 
@@ -2224,12 +2345,6 @@ base_plot |>
 - **Retail → Farmgate**: Significant Granger causality at lag 6 $(p = 0.043)$ and CCF peaks at lags 0–2.  
 - **Global → Farmgate**: High CCF at lags 0–3 but **no direct Granger effect**, indicating **indirect transmission** via retail.
 
-#### Import Dynamics
-
-- Despite falling prices, **import volumes remain volatile**, with spikes in April and June 2025—suggesting policy shifts, opportunistic buying, or logistical factors outweigh pure price incentives.
-- CCF indicates that it is actually the **domestic retail prices that lead import volume (0–3 months)**. After peak, the effect on import volume persists for up to 4 months.
-- Granger causality test confirms this relationship, suggesting that **domestic retail prices Granger-cause import volumes with significant effect from lags 2–12**. This means domestic retail prices as far as 12 months ago have influence on current import volumes.
-
 #### Stock Adjustments
 
 - **Commercial & Household Stocks** have eased as traders and consumers release stocks in a falling‑price environment.  
@@ -2241,9 +2356,13 @@ base_plot |>
 
 - Persistent price declines have driven **negative rice inflation** in 2025, helping to **cool headline CPI** given rice’s large weight in the food basket.
 
+#### Import Dynamics
+
+- Despite falling prices, **import volumes remain volatile**, with spikes in April and June 2025—suggesting policy shifts, opportunistic buying, or logistical factors outweigh pure price incentives.
+- CCF indicates that it is actually the **domestic retail prices that lead import volume (0–3 months)**. After peak, the effect on import volume persists for up to 4 months.
+- Granger causality test confirms this relationship, suggesting that **domestic retail prices Granger-cause import volumes with significant effect from lags 2–12**. This means domestic retail prices as far as 12 months ago have influence on current import volumes.
+
 :::
-
-
 
 
 ## 
