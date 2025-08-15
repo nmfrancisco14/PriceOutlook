@@ -43,28 +43,32 @@ library(daclakeapi)
 ```{r}
 #|label: data_fetching
 #|echo: false
+#|warning: false
+#|message: false
+#|include: false
+#|error: false
 
-url_list <-  list(
-  wholesale_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/wholesale_prices",
-  fao_fob_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/fob_prices",
-  exrates = "https://ricelytics.philrice.gov.ph/data_lake/api/exchange_rate",
-  retail_prices= "https://ricelytics.philrice.gov.ph/data_lake/api/retail_prices",
-  farmgate_prices= "https://ricelytics.philrice.gov.ph/data_lake/api/farmgate_prices",
-  vfa_fob_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/fob_prices_vfa"
-)
-
+# url_list <-  list(
+#   wholesale_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/wholesale_prices",
+#   fao_fob_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/fob_prices",
+#   exrates = "https://ricelytics.philrice.gov.ph/data_lake/api/exchange_rate",
+#   retail_prices= "https://ricelytics.philrice.gov.ph/data_lake/api/retail_prices",
+#   farmgate_prices= "https://ricelytics.philrice.gov.ph/data_lake/api/farmgate_prices",
+#   vfa_fob_prices = "https://ricelytics.philrice.gov.ph/data_lake/api/fob_prices_vfa"
+# )
+# 
 
 
 data <- get_all_api_data()
 
-flag_if_late <- function(date) {
-  delay <- interval(date, Sys.Date()) %/% months(1)
-  if (delay > 0) {
-    paste0(as.character(date), strrep("*", delay))
-  } else {
-    as.character(date)
-  }
-}
+# flag_if_late <- function(date) {
+#   delay <- interval(date, Sys.Date()) %/% months(1)
+#   if (delay > 0) {
+#     paste0(as.character(date), strrep("*", delay))
+#   } else {
+#     as.character(date)
+#   }
+# }
 # 
 # mostrecentdate_api <- lapply(data, function(x) x |> 
 #                                slice_max(order_by = id) |> 
@@ -1435,14 +1439,15 @@ granger_results |>
 
 ## Effect of Import ban on prices
 
-### Price change using elasticities and market equilibrium
+### Price change using elasticities and market equilibrium {.tiny-text}
 
+::: {.extra-tiny-text}
 A simple way to estimate the price impact using supply and demand elasticities is to use the elasticity incidence formula from basic market equilibrium theory.
 
 If there’s a shift in supply or demand, the proportional change in equilibrium price can be approximated as:
 
-$$
 
+$$
 \frac{\Delta P}{P} = \frac{\% \Delta Q}{E_d -E_s}\\
 \\
 \\
@@ -1454,6 +1459,7 @@ $$
 &E_s = \text{rice price elasticity of supply} \\
 \end{aligned}
 $$
+:::
 
 
 
